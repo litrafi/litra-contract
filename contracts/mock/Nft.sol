@@ -1,6 +1,6 @@
-pragma solidity ^0.8.0;
+pragma solidity =0.7.6;
 
-import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
+import "@openzeppelin/contracts/presets/ERC721PresetMinterPauserAutoId.sol";
 
 contract Nft is ERC721PresetMinterPauserAutoId {
     constructor(string memory name_, string memory symbol_, string memory baseTokenURI)

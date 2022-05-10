@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity =0.7.6;
 
 import "./NtokenFactory.sol";
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
 /*
@@ -163,7 +163,7 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
     function exchangeToU(
         address ntoken_,
         uint256 ntokenAmount_
-    ) external {
+    ) external nonReentrant {
         require(ntoken_ != address(0) && ntoken_.isContract(), "NftVault#exchangeToU: invail ntoken address.");
         require(ntokenAmount_ >0, "NftVault#exchangeToU: ntoken amount is zero");
         uint256 pid = pidFromNtoken[ntoken_];
