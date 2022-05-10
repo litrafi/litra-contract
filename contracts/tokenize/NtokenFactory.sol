@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.6.12;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "./Ntoken.sol";
@@ -7,9 +7,6 @@ import "./Ntoken.sol";
 contract NtokenFactory {
 
     event NtokenCreated(address indexed ntoken_, address indexed to_, uint256 supply_);
-
-    constructor() public {
-    }
 
     function ntokenCodeHash() external pure returns (bytes32) {
         return keccak256(abi.encodePacked(type(Ntoken).creationCode));

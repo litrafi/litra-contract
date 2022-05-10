@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.6.12;
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 abstract contract ERC20Permit is ERC20 {
     using Counters for Counters.Counter;
+    using SafeMath for uint256;
 
     mapping(address => Counters.Counter) private _nonces;
 
@@ -22,16 +24,16 @@ abstract contract ERC20Permit is ERC20 {
      * It's a good idea to use the same `name` that is defined as the ERC20 token name.
      */
     // constructor(string memory name) EIP712(name, "1") {}
-    constructor(string memory name_, string memory symbol_) public ERC20(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {
         uint256 chainId;
         assembly {
             chainId := chainid()
         }
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
-                keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes(name_)),
-                keccak256(bytes('1')),
+                keccak256(bytes("1")),
                 chainId,
                 address(this)
             )
@@ -50,17 +52,17 @@ abstract contract ERC20Permit is ERC20 {
         bytes32 r,
         bytes32 s
     ) public virtual {        
-        require(deadline >= block.timestamp, 'ERC20Permit: expired deadline');
+        require(deadline >= block.timestamp, "ERC20Permit: expired deadline");
         bytes32 digest =
             keccak256(
                 abi.encodePacked(
-                    '\x19\x01',
+                    "\x19\x01",
                     DOMAIN_SEPARATOR,
                     keccak256(abi.encode(_PERMIT_TYPEHASH, owner, spender, value, _useNonce(owner), deadline))
                 )
             );
         address recoveredAddress = ecrecover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == owner, 'ERC20Permit: invalid signature');
+        require(recoveredAddress != address(0) && recoveredAddress == owner, "ERC20Permit: invalid signature");
         _approve(owner, spender, value);
     }
 
@@ -84,6 +86,8 @@ abstract contract ERC20Permit is ERC20 {
 }
 
 abstract contract ERC20Votes is ERC20Permit {
+    using SafeMath for uint256;
+
     // A record of each accounts delegate
     mapping(address => address) internal _delegates;
 
@@ -162,7 +166,7 @@ abstract contract ERC20Votes is ERC20Permit {
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "KSCToken::delegateBySig: invalid signature");
         require(nonce == nonces[signatory]++, "KSCToken::delegateBySig: invalid nonce");
-        require(now <= expiry, "KSCToken::delegateBySig: signature expired");
+        require(block.timestamp <= expiry, "KSCToken::delegateBySig: signature expired");
         return _delegate(signatory, delegatee);
     }
 
@@ -274,7 +278,7 @@ abstract contract ERC20Votes is ERC20Permit {
         return uint32(n);
     }
 
-    function getChainId() internal pure returns (uint256) {
+    function getChainId() internal view returns (uint256) {
         uint256 chainId;
         assembly {
             chainId := chainid()
@@ -292,7 +296,7 @@ abstract contract ERC20Votes is ERC20Permit {
 }
 
 contract Ntoken is ERC20Votes {
-    constructor(string memory name_, string memory symbol_, uint Supply, address to) public ERC20Permit(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_, uint Supply, address to) ERC20Permit(name_, symbol_) {
         _mint(to, Supply);
     }
 }
