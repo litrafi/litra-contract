@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.7.6;
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 abstract contract ERC20Permit is ERC20 {
     using Counters for Counters.Counter;
