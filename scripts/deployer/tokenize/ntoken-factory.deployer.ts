@@ -1,6 +1,6 @@
-import { NtokenFactory } from "../../typechain";
-import { ContractDeployer } from "../lib/deployer";
-import { construcAndWait } from "../lib/utils";
+import { NtokenFactory } from "../../../typechain";
+import { ContractDeployer } from "../../lib/deployer";
+import { construcAndWait } from "../../lib/utils";
 
 export class NTokenFactoryDeployer extends ContractDeployer<NtokenFactory, {}> {
     protected getDeployerConfig(): { contractName: string; recorderKey?: string | undefined; } {

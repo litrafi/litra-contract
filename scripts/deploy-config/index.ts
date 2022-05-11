@@ -1,12 +1,10 @@
 import { network } from "hardhat"
 import { DeployConfig } from "../type";
 import { isTestEnv } from "../network-config";
-import { bscTestnet } from "./bscTestnet";
 
 const configs: {
     [key in string]: DeployConfig
 } = {
-    bscTestnet
 }
 
 export function getDeployConfig(): DeployConfig {

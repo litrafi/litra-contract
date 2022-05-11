@@ -1,11 +1,9 @@
 import { network } from "hardhat";
 import { CommonNetworkConfig } from "../type";
-import { bscTestnet } from "./bscTestnet";
 
 const networkConfigs: {
     [key in string]: CommonNetworkConfig
 } = {
-    bscTestnet,
 }
 
 export function getNetworkConfig(): CommonNetworkConfig {

@@ -1,5 +1,5 @@
-import { NftVaultDeployer } from "../deployer/nft-vault.deployer";
-import { NTokenFactoryDeployer } from "../deployer/ntoken-factory.deployer";
+import { NftVaultDeployer } from "../deployer/tokenize/nft-vault.deployer";
+import { NTokenFactoryDeployer } from "../deployer/tokenize/ntoken-factory.deployer";
 import { Synchroniser } from "../lib/synchroniser";
 
 export class TokenizeSynchroniser extends Synchroniser<{}> {

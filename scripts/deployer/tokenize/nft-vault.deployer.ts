@@ -1,6 +1,6 @@
-import { NftVault } from "../../typechain";
-import { ContractDeployer } from "../lib/deployer";
-import { deployAndWait } from "../lib/utils";
+import { NftVault } from "../../../typechain";
+import { ContractDeployer } from "../../lib/deployer";
+import { deployAndWait } from "../../lib/utils";
 
 declare type DeployArgs = {
     factory: string

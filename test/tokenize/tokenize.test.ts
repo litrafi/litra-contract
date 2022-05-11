@@ -2,7 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
-import { NftVaultDeployer } from "../../scripts/deployer/nft-vault.deployer";
+import { NftVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
 import { E18 } from "../../scripts/lib/constant";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser"
 import { Nft, NftVault } from "../../typechain";
