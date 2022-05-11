@@ -9,7 +9,7 @@ import { Nft, NftVault } from "../../typechain";
 import { deployMockNft } from "../mock-util/deploy.util";
 import { clear } from "../mock-util/env.util";
 
-describe("Tokenize", async () => {
+describe("Tokenize", () => {
     let nftVaultContract: NftVault & Contract;
     let nftContract: Nft & Contract;
     let user: SignerWithAddress;

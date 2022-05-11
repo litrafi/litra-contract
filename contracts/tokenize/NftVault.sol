@@ -9,24 +9,15 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
-/*
-优化方向
-1. 需要判断oracle价格获取失败的情况
-2. 增加nft交易结束的状态
-3. eth可以更换地址，更换地址要重新授权
-4. 计算盈余的eth，增加提取入口
-5. 增加交易的费率收益
-*/
-
 contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMath for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address;
 
     enum NftStatus{
-        trading,
-        redeemed,
-        end
+        TRADING,
+        REDEEMED,
+        END
     }
 
     struct NftInfo {
@@ -113,7 +104,7 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
                 redeemRatio: redeemRatio_,
                 redeemAmount: 0,
                 redeemPrice: 0,
-                status: NftStatus.trading
+                status: NftStatus.TRADING
             })
         );
         pidFromNtoken[ntoken] = nftInfo.length - 1;
@@ -130,7 +121,7 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
         require(ntokenAmount_ >0, "NftVault#redeem: ntoken amount is zero");
         uint256 pid = pidFromNtoken[ntoken_];
         NftInfo storage nft = nftInfo[pid];
-        require(nft.status == NftStatus.trading, "NftVault#redeem: nft is redeemed.");
+        require(nft.status == NftStatus.TRADING, "NftVault#redeem: nft is redeemed.");
 
         //1. transfer ntoken to vault
         require(ntokenAmount_ >= nft.redeemRatio, "NftVault#redeem: the amount is not enough.");
@@ -150,7 +141,7 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
         //4. record redeem price/amount and change status
         nft.redeemAmount = ntokenAmount_;
         nft.redeemPrice = ntokenPrice;
-        nft.status = NftStatus.redeemed;
+        nft.status = NftStatus.REDEEMED;
         require(nft.redeemAmount <= nft.supply, "NftVault#redeem: redeem over.");
 
         //5. redeem nft(tranfer nft to sender)
@@ -168,7 +159,7 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
         require(ntokenAmount_ >0, "NftVault#exchangeToU: ntoken amount is zero");
         uint256 pid = pidFromNtoken[ntoken_];
         NftInfo storage nft = nftInfo[pid];
-        require(nft.status == NftStatus.redeemed, "NftVault#redeem: nft is trading.");
+        require(nft.status == NftStatus.REDEEMED, "NftVault#redeem: nft is trading.");
         
         //1. transfer ntoken to vault
         require(ntokenAmount_ <= IERC20(ntoken_).balanceOf(_msgSender()), "NftVault#exchangeToU: the balance is not enough.");

@@ -80,6 +80,15 @@ describe('Amm', () => {
         const comparator = new BalanceComparator();
         await comparator.setBeforeBalance(tnft.address, user.address);
 
+        // try swap without eth
+        const err = await routerContract.swapExactETHForTokens(
+            0,
+            [weth.address, tnft.address],
+            user.address,
+            getNowRoughly() + 1000
+        ).catch(() => "err");
+        expect(err).eq("err");
+        // swap with eth
         await routerContract.swapExactETHForTokens(
             0,
             [weth.address, tnft.address],
