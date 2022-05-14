@@ -77,8 +77,8 @@ describe('Amm', () => {
         const amounsOut = await routerContract.getAmountsOut(ETH_SWAP_AMOUNT, [weth.address, tnft.address]);
         const estimatedPrice = await BalanceComparator.getReadableAmount(tnft.address, amounsOut[1]);
 
-        const comparator = new BalanceComparator();
-        await comparator.setBeforeBalance(tnft.address, user.address);
+        const comparator = new BalanceComparator(user.address);
+        await comparator.setBeforeBalance(tnft.address);
 
         // try swap without eth
         const err = await routerContract.swapExactETHForTokens(
@@ -97,7 +97,7 @@ describe('Amm', () => {
             { value: ETH_SWAP_AMOUNT }
         )
 
-        await comparator.setAfterBalance(tnft.address, user.address);
+        await comparator.setAfterBalance(tnft.address);
         const growth = await comparator.readableCompare(tnft.address);
         expect(growth).eq(0.9984977466199298);
         expect(estimatedPrice).closeTo(growth, growth / 1e4);

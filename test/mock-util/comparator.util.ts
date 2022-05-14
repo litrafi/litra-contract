@@ -2,30 +2,44 @@ import { BigNumber } from "ethers";
 import { BigNumber as BigNumberJs } from "bignumber.js";
 import { getContractAt } from "../../scripts/lib/utils";
 import { ERC20 } from "../../typechain";
+import { ZERO } from "../../scripts/lib/constant";
+import { getBalance } from "./env.util";
 
 export class BalanceComparator {
     private beforeBalance: Map<string, BigNumber> = new Map();
     private afterBalance: Map<string, BigNumber> = new Map();
 
-    private async getBalance(tokenAddress: string, userAddress: string): Promise<BigNumber> {
+    // eslint-disable-next-line no-useless-constructor
+    constructor(public readonly userAddress: string) {}
+
+    private async getBalance(tokenAddress: string): Promise<BigNumber> {
+        if(tokenAddress === ZERO ){
+            return getBalance(this.userAddress);
+        }
         const tokenContract = await getContractAt<ERC20>('ERC20', tokenAddress);
-        return tokenContract.balanceOf(userAddress);
+        return tokenContract.balanceOf(this.userAddress);
     }
 
     static async getReadableAmount(tokenAddress: string, amount: BigNumber): Promise<number> {
-        const tokenContract = await getContractAt<ERC20>('ERC20', tokenAddress);
-        const decimals = await tokenContract.decimals();
+        let decimals;
+        if(tokenAddress === ZERO) {
+            decimals = 18;
+        } else {
+            const tokenContract = await getContractAt<ERC20>('ERC20', tokenAddress);
+            decimals = await tokenContract.decimals();
+        }
+        
         const divisor = 1 + new Array(decimals).fill('0').join('');
         return new BigNumberJs(amount.toString()).div(divisor).toNumber();
     }
 
-    async setBeforeBalance(tokenAddress: string, userAddress: string) {
-        const balance = await this.getBalance(tokenAddress ,userAddress);
+    async setBeforeBalance(tokenAddress: string) {
+        const balance = await this.getBalance(tokenAddress);
         this.beforeBalance.set(tokenAddress, balance);
     }
 
-    async setAfterBalance(tokenAddress: string, userAddress: string) {
-        const balance = await this.getBalance(tokenAddress, userAddress);
+    async setAfterBalance(tokenAddress: string) {
+        const balance = await this.getBalance(tokenAddress);
         this.afterBalance.set(tokenAddress, balance);
     }
 

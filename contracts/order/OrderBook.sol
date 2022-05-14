@@ -8,13 +8,13 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     event PlaceOrder(uint256 indexed orderId, address seller);
-    event CancleOrder(uint256 indexed orderId, address operator);
+    event CancelOrder(uint256 indexed orderId, address operator);
     event BuyOrder(uint256 indexed orderId, address buyer);
 
     enum OrderStatus {
         ACTIVE,
         FINISHED,
-        CANCLED
+        CANCELED
     }
 
     struct Order {
@@ -50,7 +50,6 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         uint256 _price
     ) external {
         Ntoken tnft = Ntoken(_tnft);
-        require(tnft.isNtoken(), "Invalid ntoken");
         require(_tnftAmount > 0, "Invalid tnft amount");
         require(_price > 0, "Invalid price");
 
@@ -74,16 +73,16 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         emit PlaceOrder(orderId, msg.sender);
     }
 
-    function cancleOrder(uint256 _orderId) external {
+    function cancelOrder(uint256 _orderId) external {
         require(_orderId < orders.length, "Invalid order id");
         Order storage order = orders[_orderId];
         require(order.seller == msg.sender, "Forbidden cancling");
         require(order.status == OrderStatus.ACTIVE, "Invalid order");
 
-        order.status = OrderStatus.CANCLED;
+        order.status = OrderStatus.CANCELED;
         Ntoken(order.tnft).transfer(msg.sender, order.tnftAmount);
 
-        emit CancleOrder(_orderId, msg.sender);
+        emit CancelOrder(_orderId, msg.sender);
     }
 
     function buyOrder(uint256 _orderId) external payable {

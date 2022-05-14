@@ -7,3 +7,6 @@ typechain
 #Hardhat files
 cache
 artifacts
+
+.openzeppelin
+scripts/deployed/hardhat_deployed_contract_info.json

@@ -34,8 +34,8 @@ describe('Order', () => {
         const SELL_AMOUNT = BigNumber.from(E18).mul(2);
         const PRICE = BigNumber.from(E18);
 
-        const comparator = new BalanceComparator();
-        await comparator.setBeforeBalance(tnftContract.address, seller.address);
+        const comparator = new BalanceComparator(seller.address);
+        await comparator.setBeforeBalance(tnftContract.address);
 
         await tnftContract.approve(orderBookContract.address, SELL_AMOUNT);
         await orderBookContract.placeOrder(
@@ -44,7 +44,7 @@ describe('Order', () => {
             PRICE
         )
 
-        await comparator.setAfterBalance(tnftContract.address, seller.address);
+        await comparator.setAfterBalance(tnftContract.address);
         const diff = comparator.compare(tnftContract.address);
         expect(diff.toString()).eq(SELL_AMOUNT.toString());
 
@@ -71,8 +71,8 @@ describe('Order', () => {
             PRICE
         );
         // buy order
-        const comparator = new BalanceComparator();
-        await comparator.setBeforeBalance(tnftContract.address, buyer.address);
+        const comparator = new BalanceComparator(buyer.address);
+        await comparator.setBeforeBalance(tnftContract.address);
 
         // try buy without enough offer
         const err = await orderBookContract
@@ -85,7 +85,7 @@ describe('Order', () => {
             .connect(buyer)
             .buyOrder(0, { value: PRICE });
 
-        await comparator.setAfterBalance(tnftContract.address, buyer.address);
+        await comparator.setAfterBalance(tnftContract.address);
         const diff = comparator.compare(tnftContract.address);
         expect(diff).eq(SELL_AMOUNT);
     })

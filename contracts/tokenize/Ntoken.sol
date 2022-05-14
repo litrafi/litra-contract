@@ -299,8 +299,4 @@ contract Ntoken is ERC20Votes {
     constructor(string memory name_, string memory symbol_, uint Supply, address to) ERC20Permit(name_, symbol_) {
         _mint(to, Supply);
     }
-
-    function isNtoken() pure external returns(bool) {
-        return true;
-    }
 }
