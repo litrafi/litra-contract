@@ -151,28 +151,28 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
     }
     
 
-    function exchangeToU(
+    function collectNtokens(
         address ntoken_,
         uint256 ntokenAmount_
     ) external nonReentrant {
-        require(ntoken_ != address(0) && ntoken_.isContract(), "NftVault#exchangeToU: invail ntoken address.");
-        require(ntokenAmount_ >0, "NftVault#exchangeToU: ntoken amount is zero");
+        require(ntoken_ != address(0) && ntoken_.isContract(), "NftVault#collectNtokens: invail ntoken address.");
+        require(ntokenAmount_ >0, "NftVault#collectNtokens: ntoken amount is zero");
         uint256 pid = pidFromNtoken[ntoken_];
         NftInfo storage nft = nftInfo[pid];
         require(nft.status == NftStatus.REDEEMED, "NftVault#redeem: nft is trading.");
         
         //1. transfer ntoken to vault
-        require(ntokenAmount_ <= IERC20(ntoken_).balanceOf(_msgSender()), "NftVault#exchangeToU: the balance is not enough.");
+        require(ntokenAmount_ <= IERC20(ntoken_).balanceOf(_msgSender()), "NftVault#collectNtokens: the balance is not enough.");
         IERC20Upgradeable(ntoken_).safeTransferFrom(_msgSender(), address(this), ntokenAmount_);
 
         //2. transfer eth to sender
         uint256 ethAmount = ntokenAmount_.mul(nft.redeemPrice).div(1e18);
-        require(ethAmount <= address(this).balance, "NftVault#exchangeToU: the eth is not enough.");
-        require(payable(msg.sender).send(ethAmount), "NftVault#exchangeToU: sending failed");
+        require(ethAmount <= address(this).balance, "NftVault#collectNtokens: the eth is not enough.");
+        require(payable(msg.sender).send(ethAmount), "NftVault#collectNtokens: sending failed");
 
         //3. record redeem amount
         nft.redeemAmount = nft.redeemAmount + ntokenAmount_;
-        require(nft.redeemAmount <= nft.supply, "NftVault#exchangeToU: redeem over.");
+        require(nft.redeemAmount <= nft.supply, "NftVault#collectNtokens: redeem over.");
 
         emit ExchangeU(_msgSender(), pid, ntokenAmount_, ethAmount);
     }
