@@ -1,9 +1,11 @@
 import { network } from "hardhat";
 import { CommonNetworkConfig } from "../type";
+import { NETWORK_CONFIG_BNB_TESTNET } from "./bnb-testnet.config";
 
 const networkConfigs: {
     [key in string]: CommonNetworkConfig
 } = {
+    bnbTestnet: NETWORK_CONFIG_BNB_TESTNET
 }
 
 export function getNetworkConfig(): CommonNetworkConfig {
