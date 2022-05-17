@@ -9,4 +9,4 @@ cache
 artifacts
 
 .openzeppelin
-scripts/deployed/hardhat_deployed_contract_info.json
+scripts/deployed/deployed-contract/hardhat_deployed_contract_info.json

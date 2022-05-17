@@ -4,6 +4,7 @@ import { getContractAt } from "../../scripts/lib/utils";
 import { ERC20 } from "../../typechain";
 import { ZERO } from "../../scripts/lib/constant";
 import { getBalance } from "./env.util";
+import { expect } from "chai";
 
 export class BalanceComparator {
     private beforeBalance: Map<string, BigNumber> = new Map();
@@ -29,8 +30,7 @@ export class BalanceComparator {
             decimals = await tokenContract.decimals();
         }
         
-        const divisor = 1 + new Array(decimals).fill('0').join('');
-        return new BigNumberJs(amount.toString()).div(divisor).toNumber();
+        return getReadableAmount(amount, decimals);
     }
 
     async setBeforeBalance(tokenAddress: string) {
@@ -71,4 +71,9 @@ export class BalanceComparator {
         const diff = this.compare(tokenAddress);
         return BalanceComparator.getReadableAmount(tokenAddress, diff);
     }
+}
+
+export function getReadableAmount(amount: BigNumber, decimals: number = 18) {
+    const divisor = 1 + new Array(decimals).fill('0').join('');
+    return new BigNumberJs(amount.toString()).div(divisor).toNumber();
 }
