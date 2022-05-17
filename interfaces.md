@@ -225,3 +225,79 @@ enum OptionExpiration {
 #### 买家放弃行权
 - 函数定义: function buyerCancelOption(uint256 optionId) external
 - 注：买家只能在购买期权后且未行权前放弃行权
+
+## Lend
+
+### LendBook
+
+#### Total Supply TNTFs
+- 变量定义: uint256 public totalTnfts
+
+#### Total Borrowings
+- 变量定义: uint256 public totalInterests
+
+#### 获取借贷列表
+- 函数定义: function getLendsInfoByFilter(
+        bool _mine,
+        LendStatus _status
+    ) external view returns(Lend[] memory _lends)
+- _mine: 是否与"我"有关
+- _status: 筛选状态
+- Lend结构:
+
+```
+enum LendStatus {
+    ACTIVE, // 0
+    BORROWED, // 1
+    OVERDUE, // 2
+    CLOSED // 3
+}
+enum LendPeriod {
+    ONE_WEEK,
+    TWO_WEEK,
+    ONE_MONTH,
+    ONE_QUARTER,
+    HALF_YEAR
+}
+struct Lend {
+    uint256 lendId; // 借贷ID
+    address borrower; // 借款人
+    address tnft; // TNFT地址
+    uint256 pledgedAmount; // 借款质押的TNFT数量
+    uint256 borrowAmount; // 借款数量
+    LendPeriod lendPeriod; // 借款时间
+    uint256 interest; // 利息
+    address lender; // 放款人
+    uint256 lendTime; // 放款时间
+    LendStatus status; // 借贷状态
+}
+```
+
+#### 发起借贷
+- 函数定义: function createLend(
+        address _tnft,
+        uint256 _pledgedAmount,
+        uint256 _borrowAmount,
+        uint256 _interest,
+        LendPeriod _lendPeriod
+    )
+- _tnft: 质押的TNFT地址
+- _pledgedAmount: 质押数量
+- _borrowAmount: 借款数量
+- _interest: 利息
+- _lendPeriod: 借款时长
+
+#### 取消借款
+- 函数定义: function cancelLend(uint256 lendId)
+- lendId: 借贷id
+- 注：只能由借款人在未放款前取消借款
+
+#### 放款
+- 函数定义: function lend(uint256 lendId) external payable
+- lendId: 借贷ID
+- 注：放款将收取 borrowAmount - interest 数量的Native Token
+
+#### 还款
+- 函数定义: function payBack(uint256 lendId) external payable
+- lendId: 借贷ID
+- 注: 还款将收取 borrowAmount 数量的Native Token

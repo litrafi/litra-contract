@@ -62,8 +62,8 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         uint256 count = 0;
         for (uint256 index = 0; index < options.length; index++) {
             Option memory option = options[index];
-            bool isRelavent = option.creater == msg.sender || option.buyer == msg.sender;
-            if(option.status == status && (!mine || isRelavent)) {
+            bool isRelevant = option.creater == msg.sender || option.buyer == msg.sender;
+            if(option.status == status && (!mine || isRelevant)) {
                 count ++;
             }
         }
@@ -72,8 +72,8 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         count = 0;
         for (uint256 index = 0; index < options.length; index++) {
             Option memory option = options[index];
-            bool isRelavent = option.creater == msg.sender || option.buyer == msg.sender;
-            if(option.status == status && (!mine || isRelavent)) {
+            bool isRelevant = option.creater == msg.sender || option.buyer == msg.sender;
+            if(option.status == status && (!mine || isRelevant)) {
                 optionsInfo[count] = option;
                 count ++;
             }

@@ -9,12 +9,14 @@ export function getNowRoughly() {
     return Math.floor(Date.now() / 1000)
 }
 
-export function currentTime() {
-    return ethers.provider.getBlock('last').then(b => b.timestamp);
+export async function currentTime() {
+    const blockNum = await ethers.provider.getBlockNumber();
+    return ethers.provider.getBlock(blockNum).then(b => b.timestamp);
 }
 
-export function fastForward(seconds: number) {
-    return ethers.provider.send('evm_increaseTime', [seconds])
+export async function fastForward(seconds: number) {
+    await ethers.provider.send('evm_increaseTime', [seconds]);
+    await ethers.provider.send('evm_mine', []);
 }
 
 export async function fastForwardTo(time: number) {
