@@ -2,6 +2,7 @@ pragma solidity ^0.8.0;
 
 import "../tokenize/Ntoken.sol";
 
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -9,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     using SafeMath for uint256;
+    using AddressUpgradeable for address payable;
 
     event CreateLend(uint256 indexed lendId, address borrower);
     event CancelLend(uint256 indexed lendId, address borrower);
@@ -146,13 +148,13 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
         _lend.lendTime = block.timestamp;
         _lend.status = LendStatus.BORROWED;
 
-        payable(_lend.borrower).transfer(received);
+        payable(_lend.borrower).sendValue(received);
 
         emit LendEvent(lendId, _lend.lender);
     }
 
     /**
-     @dev Overdue paying back need extra fee
+    TODO: Overdue paying back need extra fee
      */
     function payBack(uint256 lendId) external payable nonReentrant {
         require(lendId < lends.length, "Invalid lendId");
@@ -165,7 +167,7 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
         _lend.status = LendStatus.CLOSED;
 
         Ntoken(_lend.tnft).transfer(_lend.borrower, _lend.pledgedAmount);
-        payable(_lend.lender).transfer(_lend.borrowAmount);
+        payable(_lend.lender).sendValue(_lend.borrowAmount);
 
         emit Payback(lendId, _lend.borrower);
     }

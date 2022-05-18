@@ -2,10 +2,12 @@ pragma solidity ^0.8.0;
 
 import "../tokenize/Ntoken.sol";
 
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+    using AddressUpgradeable for address payable;
 
     event PlaceOrder(uint256 indexed orderId, address seller);
     event CancelOrder(uint256 indexed orderId, address operator);
@@ -95,6 +97,7 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         order.status = OrderStatus.FINISHED;
 
         Ntoken(order.tnft).transfer(msg.sender, order.tnftAmount);
+        payable(order.seller).sendValue(order.price);
 
         emit BuyOrder(_orderId, msg.sender);
     }

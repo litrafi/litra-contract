@@ -301,3 +301,72 @@ struct Lend {
 - 函数定义: function payBack(uint256 lendId) external payable
 - lendId: 借贷ID
 - 注: 还款将收取 borrowAmount 数量的Native Token
+
+## Auction
+
+### AuctionBook
+
+#### 获取Auction列表
+- 函数定义: function getAuctionsInfoByFiler(bool _mine, AuctionStatus _status) external view returns(Auction[] memory _auctions)
+- _mine: 是否与我相关
+- _status: 需要筛选的状态
+- Auction结构:
+
+```
+enum AuctionStatus {
+    ACTIVE,
+    CLOSED
+}
+
+struct Auction {
+    uint256 auctionId; // 拍卖ID
+    address nft; // NFT地址
+    uint256 tokenId; // NFT tokenId
+    address creator; // 拍卖创建者
+    uint256 highestOffer; // 拍卖当前最高价
+    uint256 startingPrice; // 起拍价
+    uint256 minimumOffer; // 拍卖当前最低价
+    uint256 totalBids; // 竞标总价值
+    address finalBuyer; // 最终购得者
+    uint256 endTime; // 拍卖结束时间
+    AuctionStatus status; // 拍卖状态
+}
+```
+
+#### 获取拍卖历史竞标记录
+- 函数定义: function getOfferHistory(uint256 auctionId) external view returns(Bid[] memory _bids)
+- Bid 结构
+
+```
+struct Bid {
+    uint256 bidId; // 投标id
+    address bidder; // 投标人
+    uint256 auctionId; // 拍卖ID
+    uint256 offerPrice; // 报价
+    uint256 bidTime; // 投标时间
+}
+```
+
+#### 创建拍卖
+- 函数定义: function createAuction(
+        address _nft,
+        uint256 _tokenId,
+        uint256 _startingPrice,
+        uint256 _endTime
+    )
+- _nft: NFT合约地址
+- _tokenId: NFT tokenId
+- _startPrice: 起拍价
+- _endTime: 拍卖结束时间
+
+#### 取消拍卖
+- 函数定义: function cancelAuction(uint256 auctionId)
+- 注：只能在第一支投标发生前取消拍卖
+
+#### 投标
+- 函数定义: function makeOffer(uint256 auctionId) external payable
+- 注: 报价单位使用原生代币，通过value传值
+
+#### 执行拍卖结果
+- 函数定义: function executeAuctionResult(uint256 auctionId)
+- 注: 执行拍卖结果必须在拍卖时间结束后
