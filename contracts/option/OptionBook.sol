@@ -2,15 +2,17 @@ pragma solidity ^0.8.0;
 
 import "../tokenize/Ntoken.sol";
 
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 /**
- @dev 买家行权应设置期限，逾期未行权将采取反制措施：卖家将有权行权或取消合约？ 
+ TODO: 买家行权应设置期限，逾期未行权将采取反制措施：卖家将有权行权或取消合约？ 
  */
 contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMathUpgradeable for uint256;
+    using AddressUpgradeable for address payable;
 
     event CreateOption(uint256 indexed optionId, address creator);
     event PurchaseOption(uint256 indexed optionId, address buyer);
@@ -122,7 +124,7 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         option.buyer = msg.sender;
         option.status = OptionStatus.PURCHASED;
 
-        option.creater.transfer(msg.value);
+        option.creater.sendValue(msg.value);
 
         emit PurchaseOption(optionId, msg.sender);
     }
@@ -143,7 +145,7 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
 
         option.status = OptionStatus.CLOSED;
 
-        option.creater.transfer(msg.value);
+        option.creater.sendValue(msg.value);
         Ntoken(option.tnft).transfer(msg.sender, option.strikeAmount);
 
         emit ExecuteOption(optionId, msg.sender);
