@@ -2,11 +2,13 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
+import { writeTestDeployConfig } from "../../scripts/deploy-config";
 import { NftVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
 import { E18 } from "../../scripts/lib/constant";
+import { setTestNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser"
 import { Nft, NftVault } from "../../typechain";
-import { deployMockNft } from "../mock-util/deploy.util";
+import { deployMockNft, deployMockWETH } from "../mock-util/deploy.util";
 import { clear } from "../mock-util/env.util";
 
 describe("Tokenize", () => {
@@ -17,10 +19,17 @@ describe("Tokenize", () => {
     beforeEach(async () => {
         clear();
 
+        const users = await ethers.getSigners();
+        user = users[0];
+        const feeTo = users[1];
+
+        const weth = await deployMockWETH();
+        setTestNetworkConfig({ weth: weth.address });
+        writeTestDeployConfig({ feeTo: feeTo.address });
+
         const synchroniser = new TokenizeSynchroniser();
         await synchroniser.sychornise();
 
-        user = (await ethers.getSigners())[0];
 
         nftVaultContract = await new NftVaultDeployer().getInstance();
         nftContract = await deployMockNft(user.address);
@@ -61,9 +70,9 @@ describe("Tokenize", () => {
         expect(nftInfo.status).eq(0);
         
         const pid = await nftVaultContract.pidFromNtoken(nftInfo.ntokenAddress);
-        expect(pid.toNumber()).eq(0);
+        expect(pid.toNumber()).eq(1);
 
         const depositList = await nftVaultContract.getDepositedNftList(user.address);
-        expect(depositList).deep.eq([BigNumber.from(0)])
+        expect(depositList).deep.eq([BigNumber.from(1)])
     })
 })

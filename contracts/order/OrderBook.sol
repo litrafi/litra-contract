@@ -29,8 +29,9 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         OrderStatus status;
     }
 
-    mapping(address => uint256[]) public tnftOrders;
     Order[] public orders;
+    mapping(address => uint256[]) public tnftOrders;
+    mapping(address => uint256[]) public dealedTnftOrders;
 
     function initialize() public initializer {
         __Ownable_init();
@@ -44,6 +45,14 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         for (uint256 index = 0; index < orderIds.length; index++) {
             list[index] = orders[orderIds[index]];
         }
+    }
+
+    function getTnftPrice(address _tnft) external view returns(uint256) {
+        uint256[] memory dealedOrders = dealedTnftOrders[_tnft];
+        if(dealedOrders.length == 0) {
+            return 0;
+        }
+        return orders[dealedOrders[dealedOrders.length - 1]].price;
     }
 
     function placeOrder(
@@ -95,6 +104,7 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
 
         order.buyer = msg.sender;
         order.status = OrderStatus.FINISHED;
+        dealedTnftOrders[order.tnft].push(_orderId);
 
         Ntoken(order.tnft).transfer(msg.sender, order.tnftAmount);
         payable(order.seller).sendValue(order.price);

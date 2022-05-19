@@ -3,7 +3,8 @@ import { ContractDeployer } from "../../lib/deployer";
 import { deployAndWait } from "../../lib/utils";
 
 declare type DeployArgs = {
-    factory: string
+    factory: string,
+    ntokenPricer: string
 }
 
 export class NftVaultDeployer extends ContractDeployer<NftVault, DeployArgs> {
@@ -12,7 +13,7 @@ export class NftVaultDeployer extends ContractDeployer<NftVault, DeployArgs> {
     }
 
     protected async _deploy(args: DeployArgs): Promise<string> {
-        const vault = await deployAndWait<NftVault>(this.contractName, [ args.factory ])
+        const vault = await deployAndWait<NftVault>(this.contractName, [ args.factory, args.ntokenPricer ])
         return vault.address;
     }
 

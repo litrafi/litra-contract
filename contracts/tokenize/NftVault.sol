@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./NtokenFactory.sol";
-import "hardhat/console.sol";
+import "../NtokenPricer.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -46,21 +46,51 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
     //factory for create ntoken
     NtokenFactory public ntokenFactory;
 
+    // Pricer for getting ntoken price
+    NtokenPricer public ntokenPricer;
+
     event Deposit(address indexed user_, uint256 indexed pid_);
     event Redeem(address indexed user_, uint256 indexed pid_, uint256 redeemAmount_, uint256 ethAmount_);
     event ExchangeU(address indexed user_, uint256 indexed pid_, uint256 redeemAmount_, uint256 ethAmount_);
 
-    function initialize(address factory_) public initializer {
+    function initialize(address factory_, address ntokenPricer_) public initializer {
         require(factory_ != address(0), "NftVault#constructor: invaild factory address");
 
         __Ownable_init();
         __ReentrancyGuard_init();
+        _initializeNftInfo();
 
         ntokenFactory = NtokenFactory(factory_);
+        ntokenPricer = NtokenPricer(ntokenPricer_);
+    }
+
+    function _initializeNftInfo() internal {
+        // Once get pid of noexist ntoken, will get 0
+        // So the first NftInfo must be invalid
+        nftInfo.push(
+            NftInfo({
+                owner: address(0),
+                nftAddress: address(0),
+                tokenId: 0,
+                name: "",
+                description: "",
+                ntokenAddress: address(0),
+                supply: 0,
+                redeemRatio: 0,
+                redeemAmount: 0,
+                redeemPrice: 0,
+                status: NftStatus.TRADING
+            })
+        );
     }
 
     function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
         return this.onERC721Received.selector;
+    }
+
+    function isTnftActive(address _tnft) external view returns(bool) {
+        NftInfo memory nft = nftInfo[pidFromNtoken[_tnft]];
+        return nft.supply > 0 && nft.status == NftStatus.TRADING;
     }
 
     function nftInfoLength() external view returns (uint256) {
@@ -120,6 +150,7 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
         require(ntoken_ != address(0) && ntoken_.isContract(), "NftVault#redeem: invail ntoken address.");
         require(ntokenAmount_ >0, "NftVault#redeem: ntoken amount is zero");
         uint256 pid = pidFromNtoken[ntoken_];
+        require(pid != 0, "Invalid tnft");
         NftInfo storage nft = nftInfo[pid];
         require(nft.status == NftStatus.TRADING, "NftVault#redeem: nft is redeemed.");
 
@@ -129,11 +160,7 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
         IERC20Upgradeable(ntoken_).safeTransferFrom(_msgSender(), address(this), ntokenAmount_);
 
         //2. computer ntoken price   add the error condition
-        uint256 ntokenPrice = 0;
-        // if(IKscswapFactory(oracle.factory()).getPair(ntoken_, eth) != address(0)){
-        //     // ntokenPrice = oracle.consult(ntoken_, uint256(1e18), eth);
-        //     ntokenPrice = oracle.getCurrentPrice(ntoken_);
-        // }
+        uint256 ntokenPrice = ntokenPricer.getTnftPrice(ntoken_);
         uint256 ethAmount = nft.supply.sub(ntokenAmount_).mul(ntokenPrice).div(uint256(1e18));
         //3. transfer eth to vault
         require(ethAmount == msg.value, "NftVault#redeem: the eth is not enough.");
@@ -158,6 +185,7 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
         require(ntoken_ != address(0) && ntoken_.isContract(), "NftVault#collectNtokens: invail ntoken address.");
         require(ntokenAmount_ >0, "NftVault#collectNtokens: ntoken amount is zero");
         uint256 pid = pidFromNtoken[ntoken_];
+        require(pid != 0, "Invalid tnft");
         NftInfo storage nft = nftInfo[pid];
         require(nft.status == NftStatus.REDEEMED, "NftVault#redeem: nft is trading.");
         

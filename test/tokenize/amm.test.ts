@@ -8,11 +8,11 @@ import { UniswapRouterDeployer } from "../../scripts/deployer/amm/router.deploye
 import { E18 } from "../../scripts/lib/constant";
 import { getContractAt } from "../../scripts/lib/utils";
 import { setTestNetworkConfig } from "../../scripts/network-config";
-import { AmmSynchroniser } from "../../scripts/synchroniser/amm.synchroniser";
+import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
 import { UniswapV2Factory, UniswapV2Pair, UniswapV2Router02, WBNB } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployERC20Token, deployMockWETH } from "../mock-util/deploy.util";
-import { clear, getNowRoughly } from "../mock-util/env.util";
+import { clear, currentTime } from "../mock-util/env.util";
 
 describe('Amm', () => {
     let user: SignerWithAddress;
@@ -35,7 +35,7 @@ describe('Amm', () => {
         setTestNetworkConfig({ weth: weth.address });
         writeTestDeployConfig({ feeTo: feeTo.address });
 
-        await new AmmSynchroniser().sychornise();
+        await new TokenizeSynchroniser().sychornise();
 
         factoryContract = await new UniswapFactoryDeployer().getInstance();
         routerContract = await new UniswapRouterDeployer().getInstance();
@@ -57,6 +57,7 @@ describe('Amm', () => {
         await tnft.approve(routerContract.address, TNFT_AMOUNT);
         await weth.approve(routerContract.address, WETH_AMOUNT);
 
+        let now = await currentTime();
         await routerContract.addLiquidity(
             tnft.address,
             weth.address,
@@ -64,7 +65,7 @@ describe('Amm', () => {
             WETH_AMOUNT,
             0, 0,
             user.address,
-            getNowRoughly() + 1000
+            now + 1000
         )
 
         const pairBalance = await pairContract.balanceOf(user.address);
@@ -81,19 +82,21 @@ describe('Amm', () => {
         await comparator.setBeforeBalance(tnft.address);
 
         // try swap without eth
+        now = await currentTime();
         const err = await routerContract.swapExactETHForTokens(
             0,
             [weth.address, tnft.address],
             user.address,
-            getNowRoughly() + 1000
+            now + 1000
         ).catch(() => "err");
         expect(err).eq("err");
         // swap with eth
+        now = await currentTime();
         await routerContract.swapExactETHForTokens(
             0,
             [weth.address, tnft.address],
             user.address,
-            getNowRoughly() + 1000,
+            now + 1000,
             { value: ETH_SWAP_AMOUNT }
         )
 

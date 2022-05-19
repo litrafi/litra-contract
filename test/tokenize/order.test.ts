@@ -2,12 +2,14 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
+import { writeTestDeployConfig } from "../../scripts/deploy-config";
 import { OrderBookDeployer } from "../../scripts/deployer/order/order-book.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
-import { OrderSynchroniser } from "../../scripts/synchroniser/order.synchroniser";
+import { setTestNetworkConfig } from "../../scripts/network-config";
+import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
 import { Ntoken, OrderBook } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
-import { deployMockNtoken } from "../mock-util/deploy.util";
+import { deployMockNtoken, deployMockWETH } from "../mock-util/deploy.util";
 import { clear } from "../mock-util/env.util"
 
 describe('Order', () => {
@@ -23,8 +25,13 @@ describe('Order', () => {
         const users = await ethers.getSigners();
         seller = users[0];
         buyer = users[1];
+        const feeTo = users[2];
 
-        await new OrderSynchroniser().sychornise();
+        const weth = await deployMockWETH();
+        setTestNetworkConfig({ weth: weth.address });
+        writeTestDeployConfig({ feeTo: feeTo.address });
+
+        await new TokenizeSynchroniser().sychornise();
 
         orderBookContract = await new OrderBookDeployer().getInstance();
         tnftContract = await deployMockNtoken(seller.address);
