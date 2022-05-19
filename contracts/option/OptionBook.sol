@@ -44,7 +44,7 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
     }
 
     Option[] public options;
-    uint256 constant public STRIKE_PRICE_MULTIPLIER = 1e6;
+    uint256 constant public STRIKE_PRICE_MULTIPLIER = 1e18;
 
     function initialize() public initializer {
         __Ownable_init();

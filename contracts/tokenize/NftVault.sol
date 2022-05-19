@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./NtokenFactory.sol";
 import "../NtokenPricer.sol";
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";

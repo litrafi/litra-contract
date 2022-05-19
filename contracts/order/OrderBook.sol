@@ -4,9 +4,11 @@ import "../tokenize/Ntoken.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+    using SafeMathUpgradeable for uint256;
     using AddressUpgradeable for address payable;
 
     event PlaceOrder(uint256 indexed orderId, address seller);
@@ -52,7 +54,8 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         if(dealedOrders.length == 0) {
             return 0;
         }
-        return orders[dealedOrders[dealedOrders.length - 1]].price;
+        Order memory lastOrder = orders[dealedOrders[dealedOrders.length - 1]];
+        return lastOrder.price.mul(10 ** 18).div(lastOrder.tnftAmount);
     }
 
     function placeOrder(

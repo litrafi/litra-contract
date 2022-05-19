@@ -70,8 +70,7 @@ describe('Amm', () => {
 
         const pairBalance = await pairContract.balanceOf(user.address);
         expect(pairBalance.toString()).eq('1999999999999999000');
-        console.log(`Pair balance: ${pairBalance.toString()}`);
-        
+
         // swap
         const ETH_SWAP_AMOUNT = BigNumber.from(E18).mul(2);
         // evaluation price
