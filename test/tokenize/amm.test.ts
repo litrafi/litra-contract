@@ -52,20 +52,16 @@ describe('Amm', () => {
         const WETH_AMOUNT = BigNumber.from(E18).mul(2);
         
         await tnft.mint(user.address, TNFT_AMOUNT);
-        await weth.deposit({ value: WETH_AMOUNT });
-
         await tnft.approve(routerContract.address, TNFT_AMOUNT);
-        await weth.approve(routerContract.address, WETH_AMOUNT);
 
         let now = await currentTime();
-        await routerContract.addLiquidity(
+        await routerContract.addLiquidityETH(
             tnft.address,
-            weth.address,
             TNFT_AMOUNT,
-            WETH_AMOUNT,
             0, 0,
             user.address,
-            now + 1000
+            now + 1000,
+            { value: WETH_AMOUNT }
         )
 
         const pairBalance = await pairContract.balanceOf(user.address);
