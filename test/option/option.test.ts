@@ -61,13 +61,13 @@ describe('Option', () => {
             EXPIRATION
         )
         // check option list
-        let optionList = await optionBookContract.getOptionsInfoByFilter(true, OptionStatus.PURCHASED);
+        let optionList = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.PURCHASED);
         expect(optionList.length).eq(0);
-        optionList = await optionBookContract.getOptionsInfoByFilter(true, OptionStatus.CLOSED);
+        optionList = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.CLOSED);
         expect(optionList.length).eq(0);
-        optionList = await optionBookContract.getOptionsInfoByFilter(true, OptionStatus.UNFILLED);
+        optionList = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.UNFILLED);
         expect(optionList.length).eq(1);
-        optionList = await optionBookContract.getOptionsInfoByFilter(false, OptionStatus.UNFILLED);
+        optionList = await optionBookContract.getOptionsInfoByFilter(false, false, OptionStatus.UNFILLED);
         expect(optionList.length).eq(1);
         let option = optionList[0];
 
@@ -204,8 +204,30 @@ describe('Option', () => {
         // cancel option
         await optionBookContract.connect(buyer).buyerCancelOption(0);
         // check option status
-        const options = await optionBookContract.getOptionsInfoByFilter(true, OptionStatus.CLOSED);
+        const options = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.CLOSED);
         expect(options.length).eq(1);
         expect(options[0].status).eq(OptionStatus.CLOSED);
+    })
+
+    it('Peronal', async () => {
+        const STRIKE_AMOUNT = BigNumber.from(E18).mul(2);
+        const STRIKE_PRICE = 2;
+        const PREMIUM_AMOUNT = BigNumber.from(E18);
+        const EXPIRATION = OptionExpiration.ONE_WEEK;
+        // create option
+        await tnftContract.approve(optionBookContract.address, STRIKE_AMOUNT);
+        const multiplier = await optionBookContract.STRIKE_PRICE_MULTIPLIER();
+        await optionBookContract.createOption(
+            tnftContract.address,
+            STRIKE_AMOUNT,
+            multiplier.mul(STRIKE_PRICE),
+            PREMIUM_AMOUNT,
+            EXPIRATION
+        )
+        // check list
+        let list = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.CLOSED);
+        expect(list.length).eq(0);
+        list = await optionBookContract.getOptionsInfoByFilter(true, true, OptionStatus.CLOSED);
+        expect(list.length).eq(1);
     })
 })

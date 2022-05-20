@@ -61,7 +61,7 @@ describe('Auction', () => {
         expect(activceAuctionsNum).eq(BigNumber.from(1));
         expect(allAuctionsNum).eq(BigNumber.from(1));
         // check auction list
-        const list = await auctionBookContract.getAuctionsInfoByFiler(false, AuctionStatus.ACTIVE);
+        const list = await auctionBookContract.getAuctionsInfoByFiler(false, false, AuctionStatus.ACTIVE);
         expect(list.length).eq(1);
         // check auction info
         const auction = list[0];
@@ -204,7 +204,7 @@ describe('Auction', () => {
         const owner = await nftContract.ownerOf(tokenId);
         expect(owner).eq(bidder.address);
         // check list
-        const list = await auctionBookContract.getAuctionsInfoByFiler(true, AuctionStatus.CLOSED);
+        const list = await auctionBookContract.getAuctionsInfoByFiler(true, false, AuctionStatus.CLOSED);
         expect(list.length).eq(1);
         // check auction info
         const auction = list[0];
@@ -214,5 +214,25 @@ describe('Auction', () => {
         expect(auction.endTime).eq(BigNumber.from(time));
         expect(auction.totalBids).eq(MINIMUM_OFFER.add(FINAL_OFFER));
         expect(auction.highestOffer).eq(FINAL_OFFER);
+    })
+
+    it('Personal', async () => {
+        const MINIMUM_OFFER = BigNumber.from(E18);
+        const AUCTION_PERIOD = 7 * 24 * 3600;
+        const now = await currentTime();
+        const END_TIME = now + AUCTION_PERIOD;
+        // create auction
+        await nftContract.approve(auctionBookContract.address, tokenId);
+        await auctionBookContract.createAuction(
+            nftContract.address,
+            tokenId,
+            MINIMUM_OFFER,
+            END_TIME
+        );
+        // check list
+        let list = await auctionBookContract.getAuctionsInfoByFiler(true, false, AuctionStatus.CLOSED);
+        expect(list.length).eq(0);
+        list = await auctionBookContract.getAuctionsInfoByFiler(true, true, AuctionStatus.CLOSED);
+        expect(list.length).eq(1);
     })
 })

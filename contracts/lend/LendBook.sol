@@ -57,6 +57,7 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
 
     function getLendsInfoByFilter(
         bool _mine,
+        bool _ignoreStatus,
         LendStatus _status
     ) external view returns(Lend[] memory _lends) {
         uint256 count = 0;
@@ -66,7 +67,7 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
             LendStatus status = isOverdue(_lend) ? LendStatus.OVERDUE : _lend.status;
             if(
                 (!_mine || isRelevant)
-                && status == _status
+                && (_ignoreStatus || status == _status)
             ) {
                 count ++;
             }
@@ -80,7 +81,7 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
             _lend.status = isOverdue(_lend) ? LendStatus.OVERDUE : _lend.status;
             if(
                 (!_mine || isRelevant)
-                && _lend.status == _status
+                && (_ignoreStatus || _lend.status == _status)
             ) {
                 _lends[index] = _lend;
                 count ++;

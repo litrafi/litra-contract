@@ -8,7 +8,7 @@ import { LendSynchroniser } from "../../scripts/synchroniser/lend.synchroniser";
 import { LendBook, Ntoken } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployMockNtoken } from "../mock-util/deploy.util";
-import { clear, currentTime, fastForward } from "../mock-util/env.util";
+import { clear, fastForward } from "../mock-util/env.util";
 import { shouldThrow } from "../mock-util/expect-plus.util";
 
 enum LendPeriod {
@@ -68,9 +68,9 @@ describe('Lend', () => {
         const diff = comparator.compare(tnftContract.address);
         expect(diff).eq(PLEDGED_AMOUNT);
         // check lend list
-        let list = await lendBookContract.getLendsInfoByFilter(true, LendStatus.BORROWED);
+        let list = await lendBookContract.getLendsInfoByFilter(true, false, LendStatus.BORROWED);
         expect(list.length).eq(0);
-        list = await lendBookContract.getLendsInfoByFilter(true, LendStatus.ACTIVE);
+        list = await lendBookContract.getLendsInfoByFilter(true, false, LendStatus.ACTIVE);
         expect(list.length).eq(1);
         // check lend info 
         const lend = list[0];
@@ -122,7 +122,7 @@ describe('Lend', () => {
         const diff = comaprator.compare(tnftContract.address);
         expect(diff).eq(PLEDGED_AMOUNT);
         // check lend list
-        const list = await lendBookContract.getLendsInfoByFilter(true, LendStatus.CLOSED);
+        const list = await lendBookContract.getLendsInfoByFilter(true, false, LendStatus.CLOSED);
         expect(list.length).eq(1);
         // check lend info
         const lend = list[0];
@@ -173,7 +173,7 @@ describe('Lend', () => {
         const diff = await borrowerComparator.compare(ZERO);
         expect(diff).eq(received);
         // check lend list
-        const list = await lendBookContract.getLendsInfoByFilter(true, LendStatus.BORROWED);
+        const list = await lendBookContract.getLendsInfoByFilter(true, false, LendStatus.BORROWED);
         expect(list.length).eq(1);
         // check lend info
         const lend = list[0];
@@ -235,7 +235,7 @@ describe('Lend', () => {
         diff = await lenderComparator.compare(ZERO);
         expect(diff).eq(BORROW_AMOUNT);
         // check lend list
-        const list = await lendBookContract.getLendsInfoByFilter(true, LendStatus.CLOSED);
+        const list = await lendBookContract.getLendsInfoByFilter(true, false, LendStatus.CLOSED);
         expect(list.length).eq(1);
         // check lend info
         const lend = list[0];
@@ -268,10 +268,31 @@ describe('Lend', () => {
             .lend(0, { value: BORROW_AMOUNT.sub(INTEREST_AMOUNT) });
         await fastForward(LEND_PERIOD_SECONDS);
         // check lend info
-        const list = await lendBookContract.getLendsInfoByFilter(true, LendStatus.OVERDUE);
+        const list = await lendBookContract.getLendsInfoByFilter(true, false, LendStatus.OVERDUE);
         expect(list.length).eq(1);
         // check lend info
         const lend = list[0];
         expect(lend.status).eq(LendStatus.OVERDUE);
+    })
+
+    it('Personal', async () => {
+        const PLEDGED_AMOUNT = BigNumber.from(E18).mul(2);
+        const BORROW_AMOUNT = BigNumber.from(E18);
+        const INTEREST_AMOUNT = BigNumber.from(E18).div(10);
+        const LEND_PERIOD = LendPeriod.ONE_WEEK;
+        // create lend
+        await tnftContract.approve(lendBookContract.address, PLEDGED_AMOUNT);
+        await lendBookContract.createLend(
+            tnftContract.address,
+            PLEDGED_AMOUNT,
+            BORROW_AMOUNT,
+            INTEREST_AMOUNT,
+            LEND_PERIOD
+        )
+        // check list
+        let list = await lendBookContract.getLendsInfoByFilter(true, false, LendStatus.BORROWED);
+        expect(list.length).eq(0);
+        list = await lendBookContract.getLendsInfoByFilter(true, true, LendStatus.BORROWED);
+        expect(list.length).eq(1);
     })
 })

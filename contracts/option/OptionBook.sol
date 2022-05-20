@@ -59,13 +59,13 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
     //     }
     // }
 
-    function getOptionsInfoByFilter(bool mine, OptionStatus status) external view returns(Option[] memory optionsInfo) {
+    function getOptionsInfoByFilter(bool mine, bool ignoreStatus, OptionStatus status) external view returns(Option[] memory optionsInfo) {
         // get count for creating arr
         uint256 count = 0;
         for (uint256 index = 0; index < options.length; index++) {
             Option memory option = options[index];
             bool isRelevant = option.creater == msg.sender || option.buyer == msg.sender;
-            if(option.status == status && (!mine || isRelevant)) {
+            if((ignoreStatus || option.status == status) && (!mine || isRelevant)) {
                 count ++;
             }
         }
@@ -75,7 +75,7 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         for (uint256 index = 0; index < options.length; index++) {
             Option memory option = options[index];
             bool isRelevant = option.creater == msg.sender || option.buyer == msg.sender;
-            if(option.status == status && (!mine || isRelevant)) {
+            if((ignoreStatus || option.status == status) && (!mine || isRelevant) && (!mine || isRelevant)) {
                 optionsInfo[count] = option;
                 count ++;
             }

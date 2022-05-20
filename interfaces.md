@@ -84,19 +84,18 @@ enum NftStatus{
 ### UniswapV2Router
 
 #### 添加流动性
-- 函数定义: function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint amountADesired,
-        uint amountBDesired,
-        uint amountAMin,
-        uint amountBMin,
+- 函数定义: function addLiquidityETH(
+        address token,
+        uint amountTokenDesired,
+        uint amountTokenMin,
+        uint amountETHMin,
         address to,
         uint deadline
     )
-- tokenA,tokenB: 组成币对的两币
-- amountADesired, amountBDesired:添加的两币数量
-- amountAMin,amountBMin: 币A/B被投入到池中的最小数量
+- token: TNFT地址
+- amountADesired: TNFT投入的数量
+- amountTokenMin: TNFT投入池中最小数量
+- amountETHMin: ETH投入池中的最小数量
 - to: LP接受者
 - deadline: 交易最迟完成时间
 
@@ -209,6 +208,12 @@ enum OptionExpiration {
 }
 ```
 
+#### 获取期权列表
+- 函数定义: function getOptionsInfoByFilter(bool mine, bool ignoreStatus, OptionStatus status) external view returns(Option[] memory optionsInfo)
+- mine: 是否与我有关
+- igonreStatus: 是否无视状态筛选条件,用于期权功能界面列表时，此处应传false
+- status: 期权状态筛选条件
+
 #### 购买期权
 - 函数定义: function purchaseOption(uint256 optionId) external payable
 - optionId: 期权id
@@ -239,9 +244,11 @@ enum OptionExpiration {
 #### 获取借贷列表
 - 函数定义: function getLendsInfoByFilter(
         bool _mine,
+        bool _ignoreStatus,
         LendStatus _status
     ) external view returns(Lend[] memory _lends)
 - _mine: 是否与"我"有关
+- _ignoreStatus: 是否忽视状态筛选条件，用于借贷主界面列表时，应传false
 - _status: 筛选状态
 - Lend结构:
 
@@ -307,8 +314,9 @@ struct Lend {
 ### AuctionBook
 
 #### 获取Auction列表
-- 函数定义: function getAuctionsInfoByFiler(bool _mine, AuctionStatus _status) external view returns(Auction[] memory _auctions)
+- 函数定义: function getAuctionsInfoByFiler(bool _mine, bool _ignoreStatus, AuctionStatus _status) external view returns(Auction[] memory _auctions)
 - _mine: 是否与我相关
+- _ignoreStatus: 是否忽视状态筛选条件，用于借贷主界面列表时，应传false
 - _status: 需要筛选的状态
 - Auction结构:
 
@@ -370,3 +378,39 @@ struct Bid {
 #### 执行拍卖结果
 - 函数定义: function executeAuctionResult(uint256 auctionId)
 - 注: 执行拍卖结果必须在拍卖时间结束后
+
+## 用户门户
+
+### NftVault
+
+#### 获取我的TNFT列表
+- 函数定义: function getDepositedNftList(address account) external view returns(uint256[] memory)
+- 注：函数返回TNFT id数组，id传入NftVault.nftInfo接口获取TNFT详细数据
+
+### OptionBook
+
+#### 获取与我相关的期权列表
+- 函数定义: function getOptionsInfoByFilter(bool mine, bool ignoreStatus, OptionStatus status) external view returns(Option[] memory optionsInfo)
+- mine: 是否与我有关
+- igonreStatus: 是否无视状态筛选条件，此处应传true
+- status: 期权状态筛选条件
+
+### LendBook
+#### 获取与我有关的借贷列表
+- 函数定义: function getLendsInfoByFilter(
+        bool _mine,
+        bool _ignoreStatus,
+        LendStatus _status
+    ) external view returns(Lend[] memory _lends)
+- _mine: 是否与"我"有关
+- _ignoreStatus: 是否忽视状态筛选条件，此处应传true
+- _status: 筛选状态
+
+### AuctionBook
+#### 与我有关的拍卖列表
+- 函数定义: function getAuctionsInfoByFiler(bool _mine, bool _ignoreStatus, AuctionStatus _status) external view returns(Auction[] memory _auctions)
+- _mine: 是否与我相关
+- _ignoreStatus: 是否忽视状态筛选条件，此处应传true
+- _status: 需要筛选的状态
+
+

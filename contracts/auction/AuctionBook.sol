@@ -70,14 +70,14 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         }));
     }
 
-    function getAuctionsInfoByFiler(bool _mine, AuctionStatus _status) external view returns(Auction[] memory _auctions){
+    function getAuctionsInfoByFiler(bool _mine, bool _ignoreStatus, AuctionStatus _status) external view returns(Auction[] memory _auctions){
         uint256 count = 0;
         for (uint256 index = 0; index < auctions.length; index++) {
             Auction memory _auction = auctions[index];
             bool isRelevant = _auction.creator == msg.sender || userBids[msg.sender][index] != 0;
             if(
                 (!_mine || isRelevant)
-                && _auction.status == _status
+                && (_ignoreStatus || _auction.status == _status)
             ) {
                 count ++;
             }
@@ -90,7 +90,7 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
             bool isRelevant = _auction.creator == msg.sender || userBids[msg.sender][index] != 0;
             if(
                 (!_mine || isRelevant)
-                && _auction.status == _status
+                && (_ignoreStatus || _auction.status == _status)
             ) {
                 _auctions[count] = auctions[index];
                 count ++;

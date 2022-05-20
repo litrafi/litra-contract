@@ -9,6 +9,7 @@ import { join } from "path";
 import moment from "moment";
 import { isTestEnv } from "../network-config";
 import { network as blockNetwork } from "hardhat";
+import { getDeployedRecordFilePath } from "../../constant";
 
 export class DeployRecorder {
   public recorder: any;
@@ -21,13 +22,7 @@ export class DeployRecorder {
       throw Error("[DeployRecorder]: invalid network: " + network);
     }
 
-    this.recorderFilePath = join(
-      __dirname,
-      "..",
-      "deployed",
-      "deployed-contract",
-      `${network}_deployed_contract_info.json`
-    );
+    this.recorderFilePath = getDeployedRecordFilePath(network);
     this.recorder = {};
     this.readRecorder();
   }
