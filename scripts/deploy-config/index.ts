@@ -2,11 +2,13 @@ import { network } from "hardhat"
 import { DeployConfig } from "../type";
 import { isTestEnv } from "../network-config";
 import { DEPLOY_CONFIG_BNB_TESTNET } from "./bnb-testnet.config";
+import { DEPLOY_CONFIG_RINKEBY } from "./rinkeby.config";
 
 const configs: {
     [key in string]: DeployConfig
 } = {
-    bnbTestnet: DEPLOY_CONFIG_BNB_TESTNET
+    bnbTestnet: DEPLOY_CONFIG_BNB_TESTNET,
+    rinkeby: DEPLOY_CONFIG_RINKEBY
 }
 
 export function getDeployConfig(): DeployConfig {
