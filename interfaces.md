@@ -1,5 +1,23 @@
 # Archebase Interfaces
 
+## Explore
+
+### NftVault
+
+#### 根据筛选条件获取TNFT列表
+- 函数定义: function getTNFTListByFilter(
+        uint256 valuationLow,
+        uint256 valuationHigh,
+        uint256 fractionsLow,
+        uint256 fractionsHigh,
+        NftStatus status
+    ) external view returns(uint256[] memory)
+- valuationLow: 总价值下阈值
+- valutionHigh: 总价值上阈值
+- fractionLow: 总份数下阈值
+- fractionHigh: 总份数上阈值
+- NftStatus: Nft状态，详情参照下方NftStatus结构
+- 返回: nft id，使用nftInfo查询详情
 ## Tokenize
 
 ### NftVault

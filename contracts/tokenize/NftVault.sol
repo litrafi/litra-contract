@@ -94,6 +94,43 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
         return nft.supply > 0 && nft.status == NftStatus.TRADING;
     }
 
+    function getTNFTListByFilter(
+        uint256 valuationLow,
+        uint256 valuationHigh,
+        uint256 fractionsLow,
+        uint256 fractionsHigh,
+        NftStatus status
+    ) external view returns(uint256[] memory) {
+        uint256[] memory _list = new uint256[](nftInfo.length);
+        uint256 count = 0;
+        // find ids
+        for (uint256 index = 0; index < nftInfo.length; index++) {
+            NftInfo memory nft = nftInfo[index];
+            if(nft.status != status) {
+                continue;
+            }
+            if(!(nft.supply >= fractionsLow && nft.supply <= fractionsHigh)) {
+                continue;
+            }
+            // Reduce calculation of estimating valuation
+            uint256 valuation = ntokenPricer.getTnftPrice(nft.ntokenAddress).mul(nft.supply).div(1e18);
+            if(valuation >= valuationLow && valuation <= valuationHigh) {
+                _list[index] = index;
+                count ++;
+            }
+        }
+        // formate _list to a size right arr
+        uint256[] memory list = new uint256[](count);
+        count = 0;
+        for (uint256 index = 0; index < _list.length; index++) {
+            if(_list[index] != 0){
+                list[count] = _list[index];
+                count ++;
+            }
+        }
+        return list;
+    }
+
     function nftInfoLength() external view returns (uint256) {
         return nftInfo.length;
     }

@@ -18,6 +18,12 @@ import { deployMockNft, deployMockWETH } from "../mock-util/deploy.util";
 import { clear, currentTime } from "../mock-util/env.util";
 import { expectCloseTo, shouldThrow } from "../mock-util/expect-plus.util";
 
+enum NftStatus{
+    TRADING,
+    REDEEMED,
+    END
+}
+
 describe("Tokenize", () => {
     let nftVaultContract: NftVault & Contract;
     let nftContract: Nft & Contract;
@@ -184,5 +190,75 @@ describe("Tokenize", () => {
         expect(diff).eq(SELL_AMOUNT);;
         diff = await comparator.compare(ZERO);
         expectCloseTo(diff, SELL_AMOUNT.mul(priceFromPricer).div(E18), 3);
+    })
+
+    it('List', async () => {
+        // tokenize
+        const SUPPLY = BigNumber.from(E18).mul(1e5);
+        const REDEEM_RATIO = SUPPLY.mul(60).div(100);
+        const TOKEN_ID = 0;
+        const TOKEN_NAME = 'MockNft';
+        const DESCRIPTION = 'description of MockNft';
+        const TNFT_NAME = 'MockTNFT'
+        await nftContract.approve(nftVaultContract.address, 0);
+        await nftVaultContract.deposit(
+            nftContract.address,
+            TOKEN_ID,
+            TOKEN_NAME,
+            DESCRIPTION,
+            TNFT_NAME,
+            SUPPLY,
+            REDEEM_RATIO
+        )
+        const nftInfo = await nftVaultContract.nftInfo(1);
+        const tnft = await getContractAt<Ntoken>('Ntoken', nftInfo.ntokenAddress);
+        // Make an order transaction
+        const SELL_AMOUNT = BigNumber.from(E18).mul(2);
+        const PRICE = BigNumber.from(E18);
+        await tnft.approve(orderBookContract.address, SELL_AMOUNT);
+        await orderBookContract.placeOrder(
+            tnft.address,
+            SELL_AMOUNT,
+            PRICE
+        );
+        await orderBookContract
+            .connect(buyer)
+            .buyOrder(0, { value: PRICE });
+        // estimate valuation
+        const price = await pricerContract.getTnftPrice(tnft.address);
+        const valuation = price.mul(SUPPLY).div(E18);
+        // check list
+        let list = await nftVaultContract.getTNFTListByFilter(
+            valuation.sub(1),
+            valuation.add(1),
+            SUPPLY.sub(1),
+            SUPPLY.add(1),
+            NftStatus.TRADING
+        )
+        expect(list).deep.eq([BigNumber.from(1)]);
+        list = await nftVaultContract.getTNFTListByFilter(
+            valuation.sub(2),
+            valuation.sub(1),
+            SUPPLY.sub(1),
+            SUPPLY.add(1),
+            NftStatus.TRADING
+        )
+        expect(list.length).eq(0);
+        list = await nftVaultContract.getTNFTListByFilter(
+            valuation.sub(1),
+            valuation.add(1),
+            SUPPLY.sub(2),
+            SUPPLY.sub(1),
+            NftStatus.TRADING
+        )
+        expect(list.length).eq(0);
+        list = await nftVaultContract.getTNFTListByFilter(
+            valuation.sub(1),
+            valuation.add(1),
+            SUPPLY.sub(1),
+            SUPPLY.add(1),
+            NftStatus.REDEEMED
+        )
+        expect(list.length).eq(0);
     })
 })
