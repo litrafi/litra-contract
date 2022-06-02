@@ -67,6 +67,9 @@ enum NftStatus{
 }
 ```
 
+#### 根据TNFT地址获取nftId
+- 变量定义: mapping(address => uint256) public pidFromNtoken
+
 #### 查看用户持有的TNFT
 
 - 函数定义: function getDepositedNftList(address account) external view returns(uint256[] memory)
@@ -100,6 +103,11 @@ enum NftStatus{
 - tokenA,tokenB: 组成币对的两币地址
 
 ### UniswapV2Router
+
+#### 查询兑换价格
+- 函数定义: function getAmountsOut(uint amountIn, address[] memory path) returns (uint[] memory amounts)
+- amountIn: 被兑换币的数量
+- path: [被兑换币地址, 兑换获得币地址]，如查询20个TNFT能兑换多少ETH则调用, getAmountsOut(20 * 1e18, [TNFT地址, weth地址])
 
 #### 添加流动性
 - 函数定义: function addLiquidityETH(
@@ -251,6 +259,12 @@ enum OptionExpiration {
 
 ## Lend
 
+### NtokenPricer
+#### 获取TNFT单价
+- 函数定义: function getTnftPrice(address _tnft) external view returns(uint256)
+- 返回：TNFT单价，计算TNFT总价值公式: TNFT数量.mul(单价).div(1e18)
+
+#### 
 ### LendBook
 
 #### Total Supply TNTFs
@@ -400,6 +414,11 @@ struct Bid {
 ## 用户门户
 
 ### NftVault
+
+#### 获取用户NFT价值总额
+- 函数定义: function getUserCollectionValue(address user) external view returns(uint256 totalBalance)
+- user: 被查询的用户地址
+- 注： 计量代币为ETH
 
 #### 获取我的TNFT列表
 - 函数定义: function getDepositedNftList(address account) external view returns(uint256[] memory)

@@ -61,20 +61,7 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
         LendStatus _status
     ) external view returns(Lend[] memory _lends) {
         uint256 count = 0;
-        for (uint256 index = 0; index < lends.length; index++) {
-            Lend memory _lend = lends[index];
-            bool isRelevant = _lend.borrower == msg.sender || _lend.lender == msg.sender;
-            LendStatus status = isOverdue(_lend) ? LendStatus.OVERDUE : _lend.status;
-            if(
-                (!_mine || isRelevant)
-                && (_ignoreStatus || status == _status)
-            ) {
-                count ++;
-            }
-        }
-
-        _lends = new Lend[](count);
-        count = 0;
+        bool[] memory choosed = new bool[](lends.length);
         for (uint256 index = 0; index < lends.length; index++) {
             Lend memory _lend = lends[index];
             bool isRelevant = _lend.borrower == msg.sender || _lend.lender == msg.sender;
@@ -83,7 +70,18 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
                 (!_mine || isRelevant)
                 && (_ignoreStatus || _lend.status == _status)
             ) {
-                _lends[index] = _lend;
+                choosed[index] = true;
+                count ++;
+            }
+        }
+
+        _lends = new Lend[](count);
+        count = 0;
+        for (uint256 index = 0; index < lends.length; index++) {
+            if(choosed[index]) {
+                Lend memory _lend = lends[index];
+                _lend.status = isOverdue(_lend) ? LendStatus.OVERDUE : _lend.status;
+                _lends[count] = _lend;
                 count ++;
             }
         }

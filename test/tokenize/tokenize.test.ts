@@ -261,4 +261,41 @@ describe("Tokenize", () => {
         )
         expect(list.length).eq(0);
     })
+
+    it('Personal', async () => {
+        // tokenize
+        const SUPPLY = BigNumber.from(E18).mul(1e5);
+        const REDEEM_RATIO = SUPPLY.mul(60).div(100);
+        const TOKEN_ID = 0;
+        const TOKEN_NAME = 'MockNft';
+        const DESCRIPTION = 'description of MockNft';
+        const TNFT_NAME = 'MockTNFT'
+        await nftContract.approve(nftVaultContract.address, 0);
+        await nftVaultContract.deposit(
+            nftContract.address,
+            TOKEN_ID,
+            TOKEN_NAME,
+            DESCRIPTION,
+            TNFT_NAME,
+            SUPPLY,
+            REDEEM_RATIO
+        )
+        const nftInfo = await nftVaultContract.nftInfo(1);
+        const tnft = await getContractAt<Ntoken>('Ntoken', nftInfo.ntokenAddress);
+        // Make an order transaction
+        const SELL_AMOUNT = BigNumber.from(E18).mul(2);
+        const PRICE = BigNumber.from(E18);
+        await tnft.approve(orderBookContract.address, SELL_AMOUNT);
+        await orderBookContract.placeOrder(
+            tnft.address,
+            SELL_AMOUNT,
+            PRICE
+        );
+        await orderBookContract
+            .connect(buyer)
+            .buyOrder(0, { value: PRICE });
+        // check collection value
+        const collectionValue = await nftVaultContract.getUserCollectionValue(creator.address);
+        expect(collectionValue).eq(SUPPLY.sub(SELL_AMOUNT).mul(PRICE).div(SELL_AMOUNT));
+    })
 })
