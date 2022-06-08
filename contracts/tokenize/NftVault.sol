@@ -248,6 +248,9 @@ contract NftVault is Initializable, IERC721ReceiverUpgradeable, OwnableUpgradeab
         //3. record redeem amount
         nft.redeemAmount = nft.redeemAmount + ntokenAmount_;
         require(nft.redeemAmount <= nft.supply, "NftVault#collectNtokens: redeem over.");
+        if(nft.redeemAmount == nft.supply) {
+            nft.status = NftStatus.END;
+        }
 
         emit ExchangeU(_msgSender(), pid, ntokenAmount_, ethAmount);
     }

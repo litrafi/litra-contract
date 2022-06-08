@@ -84,6 +84,7 @@ enum NftStatus{
     ) payable external
 - ntoken_: TNFT地址
 - ntokenAmount_: 用于赎回的TNFT数量，规定其必须大于redeemRatio
+- 注: value 传 (totalSupply - ntokenAmount_) * tnftPrice
 
 #### 发起赎回后，回收剩余TNFT
 

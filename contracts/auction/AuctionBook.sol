@@ -162,6 +162,7 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         require(auctionId < auctions.length, "Invalid auction id");
         Auction storage auction = auctions[auctionId];
         require(auction.status == AuctionStatus.ACTIVE, "Invalid auction");
+        require(block.timestamp <= auction.endTime, "Auction was end");
         require(msg.value >= auction.startingPrice && msg.value > auction.highestOffer, "Offer is low");
 
         uint256 bidId = userBids[msg.sender][auctionId];
