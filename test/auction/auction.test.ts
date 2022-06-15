@@ -118,6 +118,9 @@ describe('Auction', () => {
         await auctionBookContract
             .connect(bidder)
             .makeOffer(0, OFFER, { value: BigNumber.from(E18) });
+        // check total bids
+        const auction = await auctionBookContract.auctions(0);
+        expect(auction.totalBids).eq(1);
     })
 
     it('Execute auction result', async () => {

@@ -49,7 +49,7 @@ contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyG
     // Pricer for getting ntoken price
     NtokenPricer public ntokenPricer;
 
-    IERC20Metadata public usdt;
+    PublicConfig public config;
 
     event Deposit(address indexed user_, uint256 indexed pid_);
     event Redeem(address indexed user_, uint256 indexed pid_, uint256 redeemAmount_, uint256 ethAmount_);
@@ -58,7 +58,7 @@ contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyG
     function initialize(
         NtokenFactory factory_,
         NtokenPricer ntokenPricer_,
-        IERC20Metadata usdt_
+        PublicConfig config_
     ) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -66,7 +66,7 @@ contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyG
 
         ntokenFactory = factory_;
         ntokenPricer = ntokenPricer_;
-        usdt = usdt_;
+        config = config_;
     }
 
     function _initializeNftInfo() internal {
@@ -177,7 +177,7 @@ contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyG
         (, , uint256 ntokenPrice) = ntokenPricer.getTnftPrice(ntoken_);
         uint256 tokenAmount = nft.supply.sub(ntokenAmount_).mul(ntokenPrice).div(uint256(1e18));
         //3. transfer pricing token to vault
-        usdt.transferFrom(_msgSender(), address(this), tokenAmount);
+        IERC20(config.usdt()).transferFrom(_msgSender(), address(this), tokenAmount);
         
         //4. record redeem price/amount and change status
         nft.redeemAmount = ntokenAmount_;
@@ -209,7 +209,7 @@ contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyG
 
         //2. transfer pricing token to sender
         uint256 tokenAmount = ntokenAmount_.mul(nft.redeemPrice).div(1e18);
-        usdt.transfer(_msgSender(), tokenAmount);
+        IERC20(config.usdt()).transfer(_msgSender(), tokenAmount);
 
         //3. record redeem amount
         nft.redeemAmount = nft.redeemAmount + ntokenAmount_;

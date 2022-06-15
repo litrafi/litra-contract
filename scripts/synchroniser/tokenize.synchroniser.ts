@@ -62,6 +62,8 @@ export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
 
         const factory = await new NTokenFactoryDeployer().getOrDeployInstance({});
         const publicConfig = await new PublicConfigDeployer().getOrDeployInstance({
+            weth,
+            usdt,
             factory: factory.address,
             pricingToken: fileConfig.pricingTokens.map(e => e.address)
         });
@@ -69,7 +71,6 @@ export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
         const ammRouter = await new UniswapRouterDeployer().getOrDeployInstance({ factory: ammFactory.address, weth });
         const orderBook = await new OrderBookDeployer().getOrDeployInstance({ config: publicConfig.address });
         const ntokenPricer = await new NtokenPricerDeployer().getOrDeployInstance({
-            weth,
             ammRouter: ammRouter.address,
             orderBook: orderBook.address,
             config: publicConfig.address,
@@ -78,7 +79,7 @@ export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
         const vault = await new NftVaultDeployer().getOrDeployInstance({
             factory: factory.address,
             ntokenPricer: ntokenPricer.address,
-            usdt: usdt
+            config: publicConfig.address
         });
         await factory.setNtokenCreator(vault.address);
     }

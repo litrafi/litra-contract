@@ -3,7 +3,6 @@ import { ContractDeployer } from "../lib/deployer"
 import { deployAndWait } from "../lib/utils";
 
 declare type DeployArgs = {
-    weth: string,
     ammRouter: string,
     orderBook: string,
     config: string,
@@ -19,7 +18,7 @@ export class NtokenPricerDeployer extends ContractDeployer<NtokenPricer, DeployA
     }
 
     protected async _deploy(args: DeployArgs): Promise<string> {
-        const ntokenPricer = await deployAndWait<NtokenPricer>(this.contractName, [args.weth, args.ammRouter, args.orderBook, args.config]);
+        const ntokenPricer = await deployAndWait<NtokenPricer>(this.contractName, [args.ammRouter, args.orderBook, args.config]);
         const token = [];
         const feeds = [];
         for (const dataFeed of args.dataFeeds) {

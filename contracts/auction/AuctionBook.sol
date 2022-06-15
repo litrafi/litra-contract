@@ -160,14 +160,13 @@ contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721R
             auctionBids[auctionId].push(bidId);
             userBids[msg.sender][auctionId] = bidId;
             bid = bids[bidId];
-            auction.totalBids = auction.totalBids.add(offer);
+            auction.totalBids = auction.totalBids.add(1);
         } else {
             // user has already bidden
             bid = bids[bidId];
             require(offer > bid.offerPrice, "New price should be higher");
             uint256 offerPlus = offer.sub(bid.offerPrice);
             TransferLib.transferFrom(auction.pricingToken, bid.bidder, payable(address(this)), offerPlus, msg.value);
-            auction.totalBids = auction.totalBids.add(offerPlus);
             bid.offerPrice = offer;
             bid.bidTime = block.timestamp;
         }

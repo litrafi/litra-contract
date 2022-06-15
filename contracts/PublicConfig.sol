@@ -8,12 +8,20 @@ import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 contract PublicConfig is OwnableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
+    address public weth;
+    address public usdt;
     NtokenFactory public ntokenFactory;
     EnumerableSetUpgradeable.AddressSet private tokenPriceWhitelist;
 
-    function initialize(NtokenFactory _factory) public initializer {
+    function initialize(
+        address _weth,
+        address _usdt,
+        NtokenFactory _factory
+    ) public initializer {
         __Ownable_init();
 
+        weth = _weth;
+        usdt = _usdt;
         ntokenFactory = _factory;
     }
 

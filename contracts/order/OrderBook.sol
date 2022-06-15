@@ -37,9 +37,11 @@ contract OrderBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     Order[] public orders;
     PublicConfig public config;
     mapping(address => uint256[]) public tnftOrders;
+    EnumerableSetUpgradeable.AddressSet private tokenPriceWhitelist;
     // TNFT => pricing token => order id
     mapping(address => mapping(address => uint256[])) public dealedTnftOrders;
-    EnumerableSetUpgradeable.AddressSet private tokenPriceWhitelist;
+    // record circulating supply of tnft
+    mapping(address => uint256) public tnftCirculation;
 
     function initialize(PublicConfig _config) public initializer {
         __Ownable_init();
@@ -91,6 +93,7 @@ contract OrderBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             })
         );
         tnftOrders[_tnft].push(orderId);
+        tnftCirculation[_tnft] = tnftCirculation[_tnft].add(_tnftAmount);
 
         emit PlaceOrder(orderId, msg.sender);
     }
@@ -102,6 +105,8 @@ contract OrderBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(order.status == OrderStatus.ACTIVE, "Invalid order");
 
         order.status = OrderStatus.CANCELED;
+        tnftCirculation[order.tnft] = tnftCirculation[order.tnft].sub(order.tnftAmount);
+
         Ntoken(order.tnft).transfer(msg.sender, order.tnftAmount);
 
         emit CancelOrder(_orderId, msg.sender);
@@ -115,6 +120,7 @@ contract OrderBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         order.buyer = msg.sender;
         order.status = OrderStatus.FINISHED;
         dealedTnftOrders[order.tnft][order.pricingToken].push(_orderId);
+        tnftCirculation[order.tnft] = tnftCirculation[order.tnft].sub(order.tnftAmount);
 
         Ntoken(order.tnft).transfer(msg.sender, order.tnftAmount);
         TransferLib.transferFrom(order.pricingToken, msg.sender, payable(order.seller), order.price, msg.value);

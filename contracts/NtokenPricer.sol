@@ -1,6 +1,7 @@
 pragma solidity ^0.8.0;
 
 import "./PublicConfig.sol";
+import "./interfaces/Amm.sol";
 import "./order/OrderBook.sol";
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -8,25 +9,9 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
-interface AmmFactory {
-    function getPair(address token0, address token1) external view returns(address);
-}
-
-interface AmmRouter {
-    function factory() external view returns(address);
-    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts);
-}
-
-interface AmmPair {
-    function token0() external view returns(address);
-    function token1() external view returns(address);
-    function getReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast);
-}
-
 contract NtokenPricer is OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
-    address public weth;
     AmmRouter public router;
     OrderBook public orderBook;
     PublicConfig public config;
@@ -34,14 +19,12 @@ contract NtokenPricer is OwnableUpgradeable {
     mapping(address => address) public dataFeeds;
 
     function initialize(
-        address _weth,
         AmmRouter _router,
         OrderBook _orderBook,
         PublicConfig _config
     ) public initializer {
         __Ownable_init();
 
-        weth = _weth;
         router = _router;
         orderBook = _orderBook;
         config = _config;
@@ -72,7 +55,7 @@ contract NtokenPricer is OwnableUpgradeable {
     }
 
     function getPriceFromAmm(address _tnft, address _pricingToken) public view returns(uint256) {
-        _pricingToken = _pricingToken == address(0) ? weth : _pricingToken;
+        _pricingToken = _pricingToken == address(0) ? config.weth() : _pricingToken;
 
         AmmFactory factory = AmmFactory(router.factory());
         // check wheter AMM enable
