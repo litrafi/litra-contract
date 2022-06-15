@@ -2,14 +2,13 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
-import { writeTestDeployConfig } from "../../scripts/deploy-config";
 import { OrderBookDeployer } from "../../scripts/deployer/order/order-book.deployer";
+import { NftVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
-import { setTestNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
 import { Ntoken, OrderBook } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
-import { deployMockNtoken, deployMockWETH } from "../mock-util/deploy.util";
+import { deployMockNtoken, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear } from "../mock-util/env.util"
 
 describe('Order', () => {
@@ -25,16 +24,13 @@ describe('Order', () => {
         const users = await ethers.getSigners();
         seller = users[0];
         buyer = users[1];
-        const feeTo = users[2];
 
-        const weth = await deployMockWETH();
-        setTestNetworkConfig({ weth: weth.address });
-        writeTestDeployConfig({ feeTo: feeTo.address });
-
+        await mockEnvForTokenizeModule();
         await new TokenizeSynchroniser().sychornise();
 
         orderBookContract = await new OrderBookDeployer().getInstance();
-        tnftContract = await deployMockNtoken(seller.address);
+        const vault = await new NftVaultDeployer().getInstance();
+        tnftContract = await deployMockNtoken(vault);
     })
 
     it('Place order', async () => {
@@ -48,23 +44,13 @@ describe('Order', () => {
         await orderBookContract.placeOrder(
             tnftContract.address,
             SELL_AMOUNT,
+            ZERO,
             PRICE
         )
 
         await comparator.setAfterBalance(tnftContract.address);
         const diff = comparator.compare(tnftContract.address);
         expect(diff.toString()).eq(SELL_AMOUNT.toString());
-
-        const tnftOrders = await orderBookContract.getOrdersByTNFT(tnftContract.address);
-        expect(tnftOrders.length).eq(1);
-        const order = tnftOrders[0];
-        expect(order.orderId).eq('0');
-        expect(order.buyer).eq(ZERO);
-        expect(order.seller).eq(seller.address);
-        expect(order.tnft).eq(tnftContract.address);
-        expect(order.tnftAmount).eq(SELL_AMOUNT);
-        expect(order.price).eq(PRICE);
-        expect(order.status).eq(0);
     })
 
     it('Buy order', async () => {
@@ -75,6 +61,7 @@ describe('Order', () => {
         await orderBookContract.placeOrder(
             tnftContract.address,
             SELL_AMOUNT,
+            ZERO,
             PRICE
         );
         // buy order

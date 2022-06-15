@@ -1,12 +1,10 @@
 import { network } from "hardhat";
 import { CommonNetworkConfig } from "../type";
-import { NETWORK_CONFIG_BNB_TESTNET } from "./bnb-testnet.config";
 import { NETWORK_CONFIG_RINKEBY } from "./rinkeby.config";
 
 const networkConfigs: {
     [key in string]: CommonNetworkConfig
 } = {
-    bnbTestnet: NETWORK_CONFIG_BNB_TESTNET,
     rinkeby: NETWORK_CONFIG_RINKEBY
 }
 

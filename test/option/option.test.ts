@@ -3,11 +3,13 @@ import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import { OptionBookDeployer } from "../../scripts/deployer/option/option-book.deployer";
+import { NftVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
 import { OptionSynchroniser } from "../../scripts/synchroniser/option.synchroniser";
+import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
 import { Ntoken, OptionBook } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
-import { deployMockNtoken } from "../mock-util/deploy.util";
+import { deployMockNtoken, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear, fastForward } from "../mock-util/env.util";
 
 enum OptionExpiration {
@@ -36,9 +38,13 @@ describe('Option', () => {
         seller = users[0];
         buyer = users[1];
 
+        await mockEnvForTokenizeModule();
+        await new TokenizeSynchroniser().sychornise();
         await new OptionSynchroniser().sychornise();
+
         optionBookContract = await new OptionBookDeployer().getInstance();
-        tnftContract = await deployMockNtoken(seller.address);
+        const vault = await new NftVaultDeployer().getInstance();
+        tnftContract = await deployMockNtoken(vault);
     })
 
     it('Create & Purchase & Execute', async () => {
@@ -55,22 +61,13 @@ describe('Option', () => {
         const multiplier = await optionBookContract.STRIKE_PRICE_MULTIPLIER();
         await optionBookContract.createOption(
             tnftContract.address,
+            ZERO,
             STRIKE_AMOUNT,
             multiplier.mul(STRIKE_PRICE),
             PREMIUM_AMOUNT,
             EXPIRATION
         )
-        // check option list
-        let optionList = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.PURCHASED);
-        expect(optionList.length).eq(0);
-        optionList = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.CLOSED);
-        expect(optionList.length).eq(0);
-        optionList = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.UNFILLED);
-        expect(optionList.length).eq(1);
-        optionList = await optionBookContract.getOptionsInfoByFilter(false, false, OptionStatus.UNFILLED);
-        expect(optionList.length).eq(1);
-        let option = optionList[0];
-
+        let option = await optionBookContract.options(0);
         // buy option
         // try without enough premium
         await sellerComparator.setBeforeBalance(ZERO);
@@ -138,9 +135,6 @@ describe('Option', () => {
         const diffReadable = await sellerComparator.readableCompare(ZERO);
         const pamentReadable = await BalanceComparator.getReadableAmount(ZERO, payment);
         expect(diffReadable).closeTo(pamentReadable, pamentReadable / 1e4)
-        // check status
-        option = await optionBookContract.options(option.optionId);
-        expect(option.status).eq(OptionStatus.CLOSED);
     })
 
     it('Cancel option by seller', async () => {
@@ -153,6 +147,7 @@ describe('Option', () => {
         const multiplier = await optionBookContract.STRIKE_PRICE_MULTIPLIER();
         await optionBookContract.createOption(
             tnftContract.address,
+            ZERO,
             STRIKE_AMOUNT,
             multiplier.mul(STRIKE_PRICE),
             PREMIUM_AMOUNT,
@@ -182,6 +177,7 @@ describe('Option', () => {
         const multiplier = await optionBookContract.STRIKE_PRICE_MULTIPLIER();
         await optionBookContract.createOption(
             tnftContract.address,
+            ZERO,
             STRIKE_AMOUNT,
             multiplier.mul(STRIKE_PRICE),
             PREMIUM_AMOUNT,
@@ -203,10 +199,6 @@ describe('Option', () => {
         expect(err).eq("err");
         // cancel option
         await optionBookContract.connect(buyer).buyerCancelOption(0);
-        // check option status
-        const options = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.CLOSED);
-        expect(options.length).eq(1);
-        expect(options[0].status).eq(OptionStatus.CLOSED);
     })
 
     it('Peronal', async () => {
@@ -219,15 +211,11 @@ describe('Option', () => {
         const multiplier = await optionBookContract.STRIKE_PRICE_MULTIPLIER();
         await optionBookContract.createOption(
             tnftContract.address,
+            ZERO,
             STRIKE_AMOUNT,
             multiplier.mul(STRIKE_PRICE),
             PREMIUM_AMOUNT,
             EXPIRATION
         )
-        // check list
-        let list = await optionBookContract.getOptionsInfoByFilter(true, false, OptionStatus.CLOSED);
-        expect(list.length).eq(0);
-        list = await optionBookContract.getOptionsInfoByFilter(true, true, OptionStatus.CLOSED);
-        expect(list.length).eq(1);
     })
 })

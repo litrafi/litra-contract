@@ -1,4 +1,5 @@
 import { AuctionBookDeployer } from "../deployer/auction/auction-book.deployer";
+import { PublicConfigDeployer } from "../deployer/public-config.deployer";
 import { Synchroniser } from "../lib/synchroniser";
 
 export class AuctionSynchroniser extends Synchroniser<{}> {
@@ -15,7 +16,8 @@ export class AuctionSynchroniser extends Synchroniser<{}> {
     }
 
     protected async deploy(fileConfig: {}): Promise<void> {
-        await new AuctionBookDeployer().getOrDeployInstance({});
+        const config = await new PublicConfigDeployer().getInstance();
+        await new AuctionBookDeployer().getOrDeployInstance({ config: config.address });
     }
     
     protected getSynchroniseFuncs(): {} {

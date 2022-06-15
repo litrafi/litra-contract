@@ -1,13 +1,15 @@
 pragma solidity ^0.8.0;
 
+import "../PublicConfig.sol";
 import "../tokenize/Ntoken.sol";
+import "../libs/TransferLib.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract LendBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     using SafeMath for uint256;
     using AddressUpgradeable for address payable;
@@ -37,6 +39,7 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
         address borrower;
         address tnft;
         uint256 pledgedAmount;
+        address pricingToken;
         uint256 borrowAmount;
         LendPeriod lendPeriod;
         uint256 interest;
@@ -46,50 +49,24 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
     }
 
     uint256 public totalTnfts;
+    PublicConfig public config;
     uint256 public totalInterests;
 
     Lend[] public lends;
 
-    function initialize() public initializer {
+    function initialize(PublicConfig _config) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
+
+        config = _config;
     }
 
-    function getLendsInfoByFilter(
-        bool _mine,
-        bool _ignoreStatus,
-        LendStatus _status
-    ) external view returns(Lend[] memory _lends) {
-        uint256 count = 0;
-        bool[] memory choosed = new bool[](lends.length);
-        for (uint256 index = 0; index < lends.length; index++) {
-            Lend memory _lend = lends[index];
-            bool isRelevant = _lend.borrower == msg.sender || _lend.lender == msg.sender;
-            _lend.status = isOverdue(_lend) ? LendStatus.OVERDUE : _lend.status;
-            if(
-                (!_mine || isRelevant)
-                && (_ignoreStatus || _lend.status == _status)
-            ) {
-                choosed[index] = true;
-                count ++;
-            }
-        }
-
-        _lends = new Lend[](count);
-        count = 0;
-        for (uint256 index = 0; index < lends.length; index++) {
-            if(choosed[index]) {
-                Lend memory _lend = lends[index];
-                _lend.status = isOverdue(_lend) ? LendStatus.OVERDUE : _lend.status;
-                _lends[count] = _lend;
-                count ++;
-            }
-        }
-    }
+    // ======== External Modify ======== //
 
     function createLend(
         address _tnft,
         uint256 _pledgedAmount,
+        address _pricingToken,
         uint256 _borrowAmount,
         uint256 _interest,
         LendPeriod _lendPeriod
@@ -97,6 +74,7 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
         require(_pledgedAmount != 0, "Invalid pledged amount");
         require(_borrowAmount != 0, "Invalid borrow amount");
         require(_interest < _borrowAmount, "Invalid interest");
+        require(config.isPrcingToken(_pricingToken), 'Invalid pricing token');
 
         Ntoken(_tnft).transferFrom(msg.sender, address(this), _pledgedAmount);
 
@@ -106,6 +84,7 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
             borrower: msg.sender,
             tnft: _tnft,
             pledgedAmount: _pledgedAmount,
+            pricingToken: _pricingToken,
             borrowAmount: _borrowAmount,
             lendPeriod: _lendPeriod,
             interest: _interest,
@@ -141,13 +120,12 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
         Lend storage _lend = lends[lendId];
         require(_lend.status == LendStatus.ACTIVE, "Invalid lend");
         uint256 received = _lend.borrowAmount.sub(_lend.interest);
-        require(msg.value == received, "Wrong offer");
 
         _lend.lender = msg.sender;
         _lend.lendTime = block.timestamp;
         _lend.status = LendStatus.BORROWED;
 
-        payable(_lend.borrower).sendValue(received);
+        TransferLib.transferFrom(_lend.pricingToken, msg.sender, payable(_lend.borrower), received, msg.value);
 
         emit LendEvent(lendId, _lend.lender);
     }
@@ -160,13 +138,12 @@ contract LendBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
         Lend storage _lend = lends[lendId];
 
         require(msg.sender == _lend.borrower, "Forbidden");
-        require(msg.value == _lend.borrowAmount, "Wrong offer");
         require(_lend.status == LendStatus.BORROWED, "Invalid lend");
 
         _lend.status = LendStatus.CLOSED;
 
         Ntoken(_lend.tnft).transfer(_lend.borrower, _lend.pledgedAmount);
-        payable(_lend.lender).sendValue(_lend.borrowAmount);
+        TransferLib.transferFrom(_lend.pricingToken, msg.sender, payable(_lend.lender), _lend.borrowAmount, msg.value);
 
         emit Payback(lendId, _lend.borrower);
     }

@@ -1,13 +1,15 @@
 pragma solidity ^0.8.0;
 
+import "../PublicConfig.sol";
 import "../tokenize/Ntoken.sol";
+import "../libs/TransferLib.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract OrderBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMathUpgradeable for uint256;
     using AddressUpgradeable for address payable;
 
@@ -27,30 +29,29 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         address seller;
         address tnft;
         uint256 tnftAmount;
+        address pricingToken;
         uint256 price;
         OrderStatus status;
     }
 
     Order[] public orders;
+    PublicConfig public config;
     mapping(address => uint256[]) public tnftOrders;
-    mapping(address => uint256[]) public dealedTnftOrders;
+    // TNFT => pricing token => order id
+    mapping(address => mapping(address => uint256[])) public dealedTnftOrders;
+    EnumerableSetUpgradeable.AddressSet private tokenPriceWhitelist;
 
-    function initialize() public initializer {
+    function initialize(PublicConfig _config) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
+
+        config = _config;
     }
 
-    function getOrdersByTNFT(address _tnft) external view returns(Order[] memory list) {
-        uint256[] memory orderIds = tnftOrders[_tnft];
-        list = new Order[](orderIds.length);
+    // ======== Public View ======== //
 
-        for (uint256 index = 0; index < orderIds.length; index++) {
-            list[index] = orders[orderIds[index]];
-        }
-    }
-
-    function getTnftPrice(address _tnft) external view returns(uint256) {
-        uint256[] memory dealedOrders = dealedTnftOrders[_tnft];
+    function getTnftPrice(address _tnft, address _pricingToken) external view returns(uint256) {
+        uint256[] memory dealedOrders = dealedTnftOrders[_tnft][_pricingToken];
         if(dealedOrders.length == 0) {
             return 0;
         }
@@ -58,14 +59,20 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         return lastOrder.price.mul(10 ** 18).div(lastOrder.tnftAmount);
     }
 
+    // ======== External Modify ======== //
+
     function placeOrder(
         address _tnft,
         uint256 _tnftAmount,
+        address _pricingToken,
         uint256 _price
     ) external {
-        Ntoken tnft = Ntoken(_tnft);
         require(_tnftAmount > 0, "Invalid tnft amount");
         require(_price > 0, "Invalid price");
+        require(config.isPrcingToken(_pricingToken), 'Invalid pricing token');
+        require(config.isNtoken(_tnft), 'Invalid tnft');
+
+        Ntoken tnft = Ntoken(_tnft);
 
         tnft.transferFrom(msg.sender, address(this), _tnftAmount);
 
@@ -78,6 +85,7 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
                 seller: msg.sender,
                 tnft: _tnft,
                 tnftAmount: _tnftAmount,
+                pricingToken: _pricingToken,
                 price: _price,
                 status: OrderStatus.ACTIVE
             })
@@ -103,14 +111,13 @@ contract OrderBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradea
         require(_orderId < orders.length, "Invalid order id");
         Order storage order = orders[_orderId];
         require(order.status == OrderStatus.ACTIVE, "Invalid order");
-        require(msg.value == order.price, "Wrong offer");
 
         order.buyer = msg.sender;
         order.status = OrderStatus.FINISHED;
-        dealedTnftOrders[order.tnft].push(_orderId);
+        dealedTnftOrders[order.tnft][order.pricingToken].push(_orderId);
 
         Ntoken(order.tnft).transfer(msg.sender, order.tnftAmount);
-        payable(order.seller).sendValue(order.price);
+        TransferLib.transferFrom(order.pricingToken, msg.sender, payable(order.seller), order.price, msg.value);
 
         emit BuyOrder(_orderId, msg.sender);
     }

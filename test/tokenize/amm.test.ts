@@ -2,21 +2,19 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
-import { writeTestDeployConfig } from "../../scripts/deploy-config";
 import { UniswapFactoryDeployer } from "../../scripts/deployer/amm/factory.deployer";
 import { UniswapRouterDeployer } from "../../scripts/deployer/amm/router.deployer";
 import { E18 } from "../../scripts/lib/constant";
 import { getContractAt } from "../../scripts/lib/utils";
-import { setTestNetworkConfig } from "../../scripts/network-config";
+import { getNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
 import { UniswapV2Factory, UniswapV2Pair, UniswapV2Router02, WBNB } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
-import { deployERC20Token, deployMockWETH } from "../mock-util/deploy.util";
+import { deployERC20Token, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear, currentTime } from "../mock-util/env.util";
 
 describe('Amm', () => {
     let user: SignerWithAddress;
-    let feeTo: SignerWithAddress;
 
     let factoryContract: UniswapV2Factory & Contract;
     let routerContract: UniswapV2Router02 & Contract;
@@ -28,15 +26,14 @@ describe('Amm', () => {
 
         const users = await ethers.getSigners();
         user = users[0];
-        feeTo = users[1];
 
-        weth = await deployMockWETH();
 
-        setTestNetworkConfig({ weth: weth.address });
-        writeTestDeployConfig({ feeTo: feeTo.address });
+        await mockEnvForTokenizeModule();
+        const networkConfig = getNetworkConfig();
 
         await new TokenizeSynchroniser().sychornise();
 
+        weth = await getContractAt<WBNB>('WBNB', networkConfig.weth);
         factoryContract = await new UniswapFactoryDeployer().getInstance();
         routerContract = await new UniswapRouterDeployer().getInstance();
     })

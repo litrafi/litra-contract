@@ -1,5 +1,8 @@
 pragma solidity ^0.8.0;
 
+import "../PublicConfig.sol";
+import "../libs/TransferLib.sol";
+
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -7,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
-contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721ReceiverUpgradeable {
+contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721ReceiverUpgradeable {
     using SafeMathUpgradeable for uint256;
     using AddressUpgradeable for address payable;
 
@@ -26,6 +29,7 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         address nft;
         uint256 tokenId;
         address creator;
+        address pricingToken;
         uint256 highestOffer;
         uint256 startingPrice;
         uint256 minimumOffer;
@@ -43,8 +47,9 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         uint256 bidTime;
     }
 
-    Auction[] public auctions;
     Bid[] public bids;
+    Auction[] public auctions;
+    PublicConfig public config;
     // auctionId => bidId[]
     mapping(uint256 => uint256[]) public auctionBids;
     // user address => auction id => bid id
@@ -53,9 +58,11 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
     uint256 public activceAuctionsNum;
     uint256 public allAuctionsNum;
 
-    function initialize() public initializer {
+    function initialize(PublicConfig _config) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
+
+        config = _config;
         _initBids();
     }
 
@@ -70,41 +77,7 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         }));
     }
 
-    function getAuctionsInfoByFiler(bool _mine, bool _ignoreStatus, AuctionStatus _status) external view returns(Auction[] memory _auctions){
-        uint256 count = 0;
-        for (uint256 index = 0; index < auctions.length; index++) {
-            Auction memory _auction = auctions[index];
-            bool isRelevant = _auction.creator == msg.sender || userBids[msg.sender][index] != 0;
-            if(
-                (!_mine || isRelevant)
-                && (_ignoreStatus || _auction.status == _status)
-            ) {
-                count ++;
-            }
-        }
-
-        _auctions = new Auction[](count);
-        count = 0;
-        for (uint256 index = 0; index < auctions.length; index++) {
-            Auction memory _auction = auctions[index];
-            bool isRelevant = _auction.creator == msg.sender || userBids[msg.sender][index] != 0;
-            if(
-                (!_mine || isRelevant)
-                && (_ignoreStatus || _auction.status == _status)
-            ) {
-                _auctions[count] = auctions[index];
-                count ++;
-            }
-        }
-    }
-
-    function getOfferHistory(uint256 auctionId) external view returns(Bid[] memory _bids) {
-        uint256[] memory bidsId = auctionBids[auctionId];
-        _bids = new Bid[](bidsId.length);
-        for (uint256 index = 0; index < bidsId.length; index++) {
-            _bids[index] = bids[bidsId[index]];
-        }
-    }
+    // ======== External Modify ======== //
 
     /**
     TODO: Authenticity of NFT need to be verified
@@ -112,6 +85,7 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
     function createAuction(
         address _nft,
         uint256 _tokenId,
+        address _pricingToken,
         uint256 _startingPrice,
         uint256 _endTime
     ) external {
@@ -128,6 +102,7 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
             tokenId: _tokenId,
             creator: msg.sender,
             highestOffer: 0,
+            pricingToken: _pricingToken,
             startingPrice: _startingPrice,
             minimumOffer: 0,
             totalBids: 0,
@@ -158,44 +133,46 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         emit CancelAuction(auctionId, msg.sender);
     }
 
-    function makeOffer(uint256 auctionId) external payable nonReentrant {
+    function makeOffer(uint256 auctionId, uint256 offer) external payable nonReentrant {
         require(auctionId < auctions.length, "Invalid auction id");
         Auction storage auction = auctions[auctionId];
         require(auction.status == AuctionStatus.ACTIVE, "Invalid auction");
         require(block.timestamp <= auction.endTime, "Auction was end");
-        require(msg.value >= auction.startingPrice && msg.value > auction.highestOffer, "Offer is low");
+        require(offer >= auction.startingPrice && offer > auction.highestOffer, "Offer is low");
 
         uint256 bidId = userBids[msg.sender][auctionId];
         Bid storage bid;
         // user has never bidden
         if(bidId == 0) {
+            TransferLib.transferFrom(auction.pricingToken, msg.sender, payable(address(this)), offer, msg.value);
             bidId = bids.length;
             bids.push(Bid({
                 bidId: bidId,
                 bidder: msg.sender,
                 auctionId: auctionId,
-                offerPrice: msg.value,
+                offerPrice: offer,
                 bidTime: block.timestamp
             }));
             // first bid
             if(auctionBids[auctionId].length == 0) {
-                auction.minimumOffer = msg.value;
+                auction.minimumOffer = offer;
             }
             auctionBids[auctionId].push(bidId);
             userBids[msg.sender][auctionId] = bidId;
             bid = bids[bidId];
-            auction.totalBids = auction.totalBids.add(msg.value);
+            auction.totalBids = auction.totalBids.add(offer);
         } else {
             // user has already bidden
             bid = bids[bidId];
-            require(msg.value > bid.offerPrice, "New price should be higher");
-            payable(bid.bidder).sendValue(bid.offerPrice);
-            auction.totalBids = auction.totalBids.sub(bid.offerPrice).add(msg.value);
-            bid.offerPrice = msg.value;
+            require(offer > bid.offerPrice, "New price should be higher");
+            uint256 offerPlus = offer.sub(bid.offerPrice);
+            TransferLib.transferFrom(auction.pricingToken, bid.bidder, payable(address(this)), offerPlus, msg.value);
+            auction.totalBids = auction.totalBids.add(offerPlus);
+            bid.offerPrice = offer;
             bid.bidTime = block.timestamp;
         }
         
-        auction.highestOffer = msg.value;
+        auction.highestOffer = offer;
 
         emit MakeOffer(auctionId, bidId, bid.bidder);
     }
@@ -220,12 +197,12 @@ contract AuctionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         auction.finalBuyer = finalBid.bidder;
         auction.endTime = block.timestamp;
         IERC721(auction.nft).safeTransferFrom(address(this), finalBid.bidder, auction.tokenId);
-        payable(auction.creator).sendValue(finalBid.offerPrice);
+        TransferLib.transfer(auction.pricingToken, payable(auction.creator), finalBid.offerPrice);
         // Return offers to those lost the bid
         if(_bidsId.length > 1) {
             for (uint256 index = 0; index < _bidsId.length - 1; index++) {
                 Bid memory bid = bids[_bidsId[index]];
-                payable(bid.bidder).sendValue(bid.offerPrice);
+                TransferLib.transfer(auction.pricingToken, payable(bid.bidder), bid.offerPrice);
             }
         }
 

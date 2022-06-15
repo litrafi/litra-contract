@@ -1,6 +1,8 @@
 pragma solidity ^0.8.0;
 
+import "../PublicConfig.sol";
 import "../tokenize/Ntoken.sol";
+import "../libs/TransferLib.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -10,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 /**
  TODO: 买家行权应设置期限，逾期未行权将采取反制措施：卖家将有权行权或取消合约？ 
  */
-contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMathUpgradeable for uint256;
     using AddressUpgradeable for address payable;
 
@@ -34,6 +36,7 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         uint256 optionId;
         address payable creater;
         address tnft;
+        address pricingToken;
         uint256 strikeAmount;
         uint256 strikePrice;
         uint256 premiumAmount;
@@ -44,46 +47,21 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
     }
 
     Option[] public options;
+    PublicConfig public config;
     uint256 constant public STRIKE_PRICE_MULTIPLIER = 1e18;
 
-    function initialize() public initializer {
+    function initialize(PublicConfig _config) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
+
+        config = _config;
     }
 
-    // function getOptionsInfo(uint256[] memory optionsId) external view returns(Option[] memory optionsInfo) {
-    //     optionsInfo = new Option[](optionsId.length);
-
-    //     for (uint256 index = 0; index < optionsId.length; index++) {
-    //         optionsInfo[index] = options[optionsId[index]];
-    //     }
-    // }
-
-    function getOptionsInfoByFilter(bool mine, bool ignoreStatus, OptionStatus status) external view returns(Option[] memory optionsInfo) {
-        // get count for creating arr
-        uint256 count = 0;
-        for (uint256 index = 0; index < options.length; index++) {
-            Option memory option = options[index];
-            bool isRelevant = option.creater == msg.sender || option.buyer == msg.sender;
-            if((ignoreStatus || option.status == status) && (!mine || isRelevant)) {
-                count ++;
-            }
-        }
-        // push option info to arr
-        optionsInfo = new Option[](count);
-        count = 0;
-        for (uint256 index = 0; index < options.length; index++) {
-            Option memory option = options[index];
-            bool isRelevant = option.creater == msg.sender || option.buyer == msg.sender;
-            if((ignoreStatus || option.status == status) && (!mine || isRelevant) && (!mine || isRelevant)) {
-                optionsInfo[count] = option;
-                count ++;
-            }
-        }
-    }
+    // ======== External Modify ======== //
 
     function createOption(
         address _tnft,
+        address _pricingToken,
         uint256 _strikeAmount,
         uint256 _strikePrice,
         uint256 _premiumAmount,
@@ -92,6 +70,7 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         Ntoken tnft = Ntoken(_tnft);
         require(_strikeAmount > 0, "Invalid strike amount");
         require(_strikePrice > 0, "Invliad strike price");
+        require(config.isPrcingToken(_pricingToken), 'Invalid pricing token');
         
         tnft.transferFrom(msg.sender, address(this), _strikeAmount);
 
@@ -101,6 +80,7 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
                 optionId: optionId,
                 creater: payable(msg.sender),
                 tnft: _tnft,
+                pricingToken: _pricingToken,
                 strikeAmount: _strikeAmount,
                 strikePrice: _strikePrice,
                 premiumAmount: _premiumAmount,
@@ -118,13 +98,12 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         require(optionId < options.length, "Invalid optionId");
         Option storage option = options[optionId];
 
-        require(msg.value == option.premiumAmount, "Wrong value");
         require(option.status == OptionStatus.UNFILLED, "Invalid option");
 
         option.buyer = msg.sender;
         option.status = OptionStatus.PURCHASED;
 
-        option.creater.sendValue(msg.value);
+        TransferLib.transferFrom(option.pricingToken, msg.sender, option.creater, option.premiumAmount, msg.value);
 
         emit PurchaseOption(optionId, msg.sender);
     }
@@ -140,12 +119,11 @@ contract OptionBook is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
             block.timestamp >= option.createdTime.add(getExpirationSeconds(option.expiration)),
             "Can't execute now"
         );
-        require(msg.value == payment, "Wrong value");
         require(option.status == OptionStatus.PURCHASED, "Invalid option");
 
         option.status = OptionStatus.CLOSED;
 
-        option.creater.sendValue(msg.value);
+        TransferLib.transferFrom(option.pricingToken, msg.sender, option.creater, payment, msg.value);
         Ntoken(option.tnft).transfer(msg.sender, option.strikeAmount);
 
         emit ExecuteOption(optionId, msg.sender);

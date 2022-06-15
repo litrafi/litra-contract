@@ -1,4 +1,5 @@
 import { OptionBookDeployer } from "../deployer/option/option-book.deployer";
+import { PublicConfigDeployer } from "../deployer/public-config.deployer";
 import { Synchroniser } from "../lib/synchroniser";
 
 export class OptionSynchroniser extends Synchroniser<{}> {
@@ -15,7 +16,8 @@ export class OptionSynchroniser extends Synchroniser<{}> {
     }
 
     protected async deploy(fileConfig: {}): Promise<void> {
-        await new OptionBookDeployer().getOrDeployInstance({});
+        const config = await new PublicConfigDeployer().getInstance();
+        await new OptionBookDeployer().getOrDeployInstance({ config: config.address });
     }
 
     protected getSynchroniseFuncs(): {} {

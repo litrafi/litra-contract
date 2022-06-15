@@ -1,4 +1,5 @@
 import { LendBookDeployer } from "../deployer/lend/lend-book.deployer";
+import { PublicConfigDeployer } from "../deployer/public-config.deployer";
 import { Synchroniser } from "../lib/synchroniser";
 
 export class LendSynchroniser extends Synchroniser<{}> {
@@ -15,7 +16,8 @@ export class LendSynchroniser extends Synchroniser<{}> {
     }
 
     protected async deploy(fileConfig: {}): Promise<void> {
-        await new LendBookDeployer().getOrDeployInstance({});
+        const config = await new PublicConfigDeployer().getInstance();
+        await new LendBookDeployer().getOrDeployInstance({ config: config.address });
     }
 
     protected getSynchroniseFuncs(): {} {
