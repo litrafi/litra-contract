@@ -37,7 +37,7 @@ export async function mockEnvForTokenizeModule() {
     const usdt = await deployERC20Token('USDT');
     const usdc = await deployERC20Token('USDC');
     const weth = await deployMockWETH();
-    const usdtDataFeed = await construcAndWait<MockDataFeed>('MockDataFeed', [BigNumber.from(E18)]);
+    const usdtDataFeed = await construcAndWait<MockDataFeed>('MockDataFeed', [BigNumber.from('100000000')]);
     const wethDataFeed = await construcAndWait<MockDataFeed>('MockDataFeed', [BigNumber.from(E18).mul('1126')])
     const networkConfig: CommonNetworkConfig = {
         weth: weth.address,

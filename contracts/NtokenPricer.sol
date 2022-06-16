@@ -88,6 +88,9 @@ contract NtokenPricer is OwnableUpgradeable {
             /*uint80 answeredInRound*/
         ) = AggregatorV3Interface(dataFeeds[token]).latestRoundData();
         uint256 decimals = token == address(0) ? 18 : IERC20Metadata(token).decimals();
-        return uint(price).mul(amount).div(10 ** decimals);
+        uint256 valuation = uint(price).mul(amount).div(10 ** decimals);
+        uint8 usdtDecimals = IERC20Metadata(config.usdt()).decimals();
+        uint8 priceDecimals = AggregatorV3Interface(dataFeeds[token]).decimals();
+        return valuation.mul(10 ** usdtDecimals).div(10 ** priceDecimals);
     }
 }
