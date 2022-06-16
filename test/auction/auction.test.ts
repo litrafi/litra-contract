@@ -4,9 +4,11 @@ import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import { AuctionBookDeployer } from "../../scripts/deployer/auction/auction-book.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
+import { construcAndWait } from "../../scripts/lib/utils";
 import { AuctionSynchroniser } from "../../scripts/synchroniser/auction.syncrhoniser";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
 import { AuctionBook, Nft } from "../../typechain";
+import { MockERC1155 } from "../../typechain/MockERC1155";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployMockNft, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear, currentTime, fastForward } from "../mock-util/env.util";
@@ -184,5 +186,40 @@ describe('Auction', () => {
             MINIMUM_OFFER,
             END_TIME
         );
+    })
+
+    it('Auction ERC1155', async () => {
+        const erc1155Nft = await construcAndWait<MockERC1155>('MockERC1155', ['']);
+        const MINIMUM_OFFER = BigNumber.from(E18);
+        const FINAL_OFFER = MINIMUM_OFFER.add(E18);
+        const AUCTION_PERIOD = 7 * 24 * 3600;
+        const now = await currentTime();
+        const END_TIME = now + AUCTION_PERIOD;
+        // create
+        await erc1155Nft.mint(auctionCreator.address, tokenId, 1, [0]);
+        await erc1155Nft.setApprovalForAll(auctionBookContract.address, true);
+        await auctionBookContract.createAuction(
+            erc1155Nft.address,
+            tokenId,
+            ZERO,
+            MINIMUM_OFFER,
+            END_TIME
+        );
+        // make offer
+        await auctionBookContract
+            .connect(bidder2)
+            .makeOffer(0, MINIMUM_OFFER, { value: MINIMUM_OFFER });
+        await auctionBookContract
+            .connect(bidder)
+            .makeOffer(0, FINAL_OFFER, { value: FINAL_OFFER });
+        // execute auction result
+        await fastForward(AUCTION_PERIOD);
+
+        await auctionBookContract
+            .connect(bidder)
+            .executeAuctionResult(0);
+        // return the offer
+        const balance = await erc1155Nft.balanceOf(bidder.address, tokenId);
+        expect(balance).eq(1);
     })
 })

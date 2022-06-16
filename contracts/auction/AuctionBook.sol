@@ -2,15 +2,14 @@ pragma solidity ^0.8.0;
 
 import "../PublicConfig.sol";
 import "../libs/TransferLib.sol";
+import "../utils/NftReceiver.sol";
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
-contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721ReceiverUpgradeable {
+contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver {
     using SafeMathUpgradeable for uint256;
     using AddressUpgradeable for address payable;
 
@@ -93,7 +92,7 @@ contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721R
         require(_startingPrice > 0, "Invalid minimum offer");
         require(_endTime > block.timestamp, "Invalid end time");
 
-        IERC721(_nft).safeTransferFrom(msg.sender, address(this), _tokenId);
+        TransferLib.nftTransferFrom(_nft, msg.sender, address(this), _tokenId);
 
         uint256 auctionId = auctions.length;
         auctions.push(Auction({
@@ -128,7 +127,7 @@ contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721R
         activceAuctionsNum = activceAuctionsNum.sub(1);
         allAuctionsNum = allAuctionsNum.sub(1);
 
-        IERC721(auction.nft).safeTransferFrom(address(this), auction.creator, auction.tokenId);
+        TransferLib.nftTransferFrom(auction.nft, address(this), auction.creator, auction.tokenId);
 
         emit CancelAuction(auctionId, msg.sender);
     }
@@ -186,7 +185,7 @@ contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721R
         uint256[] memory _bidsId = auctionBids[auctionId];
         // No one bid, return the NFT
         if(_bidsId.length == 0) {
-            IERC721(auction.nft).safeTransferFrom(address(this), auction.creator, auction.tokenId);
+            TransferLib.nftTransferFrom(auction.nft, address(this), auction.creator, auction.tokenId);
             return;
         }
         // Transfer NFT the final bidder and transfer the offer to auction creator
@@ -195,7 +194,7 @@ contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721R
         require(finalBid.offerPrice == auction.highestOffer, "Unknown error");
         auction.finalBuyer = finalBid.bidder;
         auction.endTime = block.timestamp;
-        IERC721(auction.nft).safeTransferFrom(address(this), finalBid.bidder, auction.tokenId);
+        TransferLib.nftTransferFrom(auction.nft, address(this), finalBid.bidder, auction.tokenId);
         TransferLib.transfer(auction.pricingToken, payable(auction.creator), finalBid.offerPrice);
         // Return offers to those lost the bid
         if(_bidsId.length > 1) {
@@ -206,9 +205,5 @@ contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, IERC721R
         }
 
         emit ExecuteAuctionResult(auctionId, auction.highestOffer, msg.sender);
-    }
-
-    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
-        return this.onERC721Received.selector;
     }
 }

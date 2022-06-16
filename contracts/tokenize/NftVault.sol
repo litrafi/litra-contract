@@ -3,13 +3,13 @@ pragma solidity ^0.8.0;
 
 import "./NtokenFactory.sol";
 import "../NtokenPricer.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "../utils/NftReceiver.sol";
+
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
 
-contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver {
     using SafeMath for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address;
@@ -89,10 +89,6 @@ contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyG
         );
     }
 
-    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
     function isTnftActive(address _tnft) external view returns(bool) {
         NftInfo memory nft = nftInfo[pidFromNtoken[_tnft]];
         return nft.supply > 0 && nft.status == NftStatus.TRADING;
@@ -122,12 +118,11 @@ contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyG
     ) external {
         require(!address(_msgSender()).isContract(), "NftVault#deposit: sender is a contract.");
         require(nft_ != address(0) && nft_.isContract(), "NftVault#deposit: invail nft address.");
-        require(_msgSender() == IERC721(nft_).ownerOf(tokenId_), "NftVault#deposit: not owner of the nft.");
         require(supply_ > 0, "NftVault#redeem: ntoken supply is zero.");
         require(redeemRatio_ > supply_.mul(50).div(100) && redeemRatio_ <= supply_, "NftVault#deposit: erro redeem amount.");
         
         //1. tansfer nft to vault
-        IERC721(nft_).safeTransferFrom(_msgSender(), address(this), tokenId_);
+        TransferLib.nftTransferFrom(nft_, _msgSender(), address(this), tokenId_);
 
         //2. creat ntoken
         // string memory ntokenName = name_.toSlice().concat("_".toSlice())
@@ -186,7 +181,7 @@ contract NftVault is IERC721ReceiverUpgradeable, OwnableUpgradeable, ReentrancyG
         require(nft.redeemAmount <= nft.supply, "NftVault#redeem: redeem over.");
 
         //5. redeem nft(tranfer nft to sender)
-        IERC721(nft.nftAddress).safeTransferFrom(address(this), _msgSender(), nft.tokenId);
+        TransferLib.nftTransferFrom(nft.nftAddress, address(this), _msgSender(), nft.tokenId);
 
         emit Redeem(_msgSender(), pid, ntokenAmount_, tokenAmount);
     }

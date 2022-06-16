@@ -8,10 +8,11 @@ import { NtokenPricerDeployer } from "../../scripts/deployer/ntoken-pricer.deplo
 import { OrderBookDeployer } from "../../scripts/deployer/order/order-book.deployer";
 import { NftVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
-import { getContractAt } from "../../scripts/lib/utils";
+import { construcAndWait, getContractAt } from "../../scripts/lib/utils";
 import { getNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser"
 import { MockERC20, Nft, NftVault, Ntoken, NtokenPricer, OrderBook, UniswapV2Factory, UniswapV2Router02, WBNB } from "../../typechain";
+import { MockERC1155 } from "../../typechain/MockERC1155";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployMockNft, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear, currentTime } from "../mock-util/env.util";
@@ -225,5 +226,36 @@ describe("Tokenize", () => {
         const wethValue = await pricerContract.getValuation(ZERO, SUPPLY.sub(SELL_AMOUNT).mul(PRICE).div(SELL_AMOUNT));
         const collectionValue = await nftVaultContract.getUserCollectionValue(creator.address);
         expect(collectionValue).eq(wethValue);
+    })
+
+    it('Deposit & Redeem ERC1155', async () => {
+        const erc1155Nft = await construcAndWait<MockERC1155>('MockERC1155', ['']);
+        // tokenize
+        const SUPPLY = BigNumber.from(E18).mul(1e5);
+        const REDEEM_RATIO = SUPPLY.mul(60).div(100);
+        const TOKEN_ID = 0;
+        const TOKEN_NAME = 'MockNft';
+        const DESCRIPTION = 'description of MockNft';
+        const TNFT_NAME = 'MockTNFT'
+        await erc1155Nft.mint(creator.address, 0, 1, [0]);
+        await erc1155Nft.setApprovalForAll(nftVaultContract.address, true);
+        await nftVaultContract.deposit(
+            erc1155Nft.address,
+            TOKEN_ID,
+            TOKEN_NAME,
+            DESCRIPTION,
+            TNFT_NAME,
+            SUPPLY,
+            REDEEM_RATIO
+        )
+        const nft = await nftVaultContract.nftInfo(1);
+        let balance = await erc1155Nft.balanceOf(creator.address, 0);
+        expect(balance).eq(BigNumber.from(0));
+        // redeem
+        const tnft = await getContractAt<Ntoken>('Ntoken', nft.ntokenAddress);
+        await tnft.approve(nftVaultContract.address, SUPPLY);
+        await nftVaultContract.redeem(nft.ntokenAddress, SUPPLY);
+        balance = await erc1155Nft.balanceOf(creator.address, 0);
+        expect(balance).eq(BigNumber.from(1));
     })
 })
