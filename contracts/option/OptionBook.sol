@@ -34,7 +34,7 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     struct Option {
         uint256 optionId;
-        address payable creater;
+        address payable creator;
         address tnft;
         address pricingToken;
         uint256 strikeAmount;
@@ -78,7 +78,7 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         options.push(
             Option({
                 optionId: optionId,
-                creater: payable(msg.sender),
+                creator: payable(msg.sender),
                 tnft: _tnft,
                 pricingToken: _pricingToken,
                 strikeAmount: _strikeAmount,
@@ -103,7 +103,7 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         option.buyer = msg.sender;
         option.status = OptionStatus.PURCHASED;
 
-        TransferLib.transferFrom(option.pricingToken, msg.sender, option.creater, option.premiumAmount, msg.value);
+        TransferLib.transferFrom(option.pricingToken, msg.sender, option.creator, option.premiumAmount, msg.value);
 
         emit PurchaseOption(optionId, msg.sender);
     }
@@ -123,7 +123,7 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         option.status = OptionStatus.CLOSED;
 
-        TransferLib.transferFrom(option.pricingToken, msg.sender, option.creater, payment, msg.value);
+        TransferLib.transferFrom(option.pricingToken, msg.sender, option.creator, payment, msg.value);
         Ntoken(option.tnft).transfer(msg.sender, option.strikeAmount);
 
         emit ExecuteOption(optionId, msg.sender);
@@ -134,10 +134,10 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         Option storage option = options[optionId];
 
         require(option.status == OptionStatus.UNFILLED, "Invalid option");
-        require(msg.sender == option.creater, "Forbidden");
+        require(msg.sender == option.creator, "Forbidden");
 
         option.status = OptionStatus.CLOSED;
-        Ntoken(option.tnft).transfer(option.creater, option.strikeAmount);
+        Ntoken(option.tnft).transfer(option.creator, option.strikeAmount);
     }
 
     function buyerCancelOption(uint256 optionId) external {
@@ -148,7 +148,7 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(msg.sender == option.buyer, "Forbidden");
 
         option.status = OptionStatus.CLOSED;
-        Ntoken(option.tnft).transfer(option.creater, option.strikeAmount);
+        Ntoken(option.tnft).transfer(option.creator, option.strikeAmount);
     }
 
     function getExpirationSeconds(OptionExpiration expiration) private pure returns(uint256 _seconds) {

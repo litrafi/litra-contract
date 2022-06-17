@@ -211,7 +211,7 @@ enum OrderStatus {
 ```
 struct Option {
     uint256 optionId; // 期权ID
-    address payable creater; // 期权创建人，卖家
+    address payable creator; // 期权创建人，卖家
     address tnft; // TNFT 价格
     uint256 strikeAmount; // 交易的TNFT数量
     uint256 strikePrice; // 交易的TNFT单价
