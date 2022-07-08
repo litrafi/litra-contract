@@ -94,12 +94,27 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         return nft.supply > 0 && nft.status == NftStatus.TRADING;
     }
 
-    function getUserCollectionValue(address user) external view returns(uint256 totalValuation) {
+    function getUserCollection(address user) external view returns(uint256 totalValuation, uint256[] memory tnftIds) {
+        bool[] memory owned = new bool[](nftInfo.length);
+        uint256 totalOwned = 0;
         for (uint256 index = 1; index < nftInfo.length; index++) {
             address tnft = nftInfo[index].ntokenAddress;
             uint256 balance = Ntoken(tnft).balanceOf(user);
-            (,, uint256 price) = ntokenPricer.getTnftPrice(tnft);
-            totalValuation = totalValuation.add(price.mul(balance).div(1e18));
+            if(balance > 0) {
+                (,, uint256 price) = ntokenPricer.getTnftPrice(tnft);
+                totalValuation = totalValuation.add(price.mul(balance).div(1e18));
+                totalOwned ++;
+                owned[index] = true;
+            }
+        }
+        
+        tnftIds = new uint256[](totalOwned);
+        uint256 cursor = 0;
+        for (uint256 index = 1; index < nftInfo.length; index++) {
+            if(owned[index] == true) {
+                tnftIds[cursor] = index;
+                cursor ++;
+            }
         }
     }
 
@@ -120,7 +135,6 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         require(nft_ != address(0) && nft_.isContract(), "NftVault#deposit: invail nft address.");
         require(supply_ > 0, "NftVault#redeem: ntoken supply is zero.");
         require(redeemRatio_ > supply_.mul(50).div(100) && redeemRatio_ <= supply_, "NftVault#deposit: erro redeem amount.");
-        
         //1. tansfer nft to vault
         TransferLib.nftTransferFrom(nft_, _msgSender(), address(this), tokenId_);
 

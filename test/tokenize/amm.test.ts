@@ -8,7 +8,7 @@ import { E18 } from "../../scripts/lib/constant";
 import { getContractAt } from "../../scripts/lib/utils";
 import { getNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
-import { UniswapV2Factory, UniswapV2Pair, UniswapV2Router02, WBNB } from "../../typechain";
+import { UniswapV2Factory, UniswapV2Pair, UniswapV2Router, WBNB } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployERC20Token, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear, currentTime } from "../mock-util/env.util";
@@ -17,7 +17,7 @@ describe('Amm', () => {
     let user: SignerWithAddress;
 
     let factoryContract: UniswapV2Factory & Contract;
-    let routerContract: UniswapV2Router02 & Contract;
+    let routerContract: UniswapV2Router & Contract;
 
     let weth: WBNB & Contract;
 

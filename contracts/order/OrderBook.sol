@@ -50,7 +50,11 @@ contract OrderBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         config = _config;
     }
 
-    // ======== Public View ======== //
+    // ======== External View ======== //
+
+    function ordersLength() external view returns(uint256) {
+        return orders.length;
+    }
 
     function getTnftPrice(address _tnft, address _pricingToken) external view returns(uint256) {
         uint256[] memory dealedOrders = dealedTnftOrders[_tnft][_pricingToken];

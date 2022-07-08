@@ -11,7 +11,7 @@
 		"address": "0x7fe11c48e1e6e67ABd2565a754462eFE10cE0837",
 		"time": "2022-06-16 14:42:45"
 	},
-	"UniswapRouter": {
+	"UniswapV2Router": {
 		"address": "0x9a90Cb6a9d94F823CB54E91a2B533D7625AfE35D",
 		"time": "2022-06-16 14:42:56"
 	},
@@ -38,5 +38,9 @@
 	"AuctionBook": {
 		"address": "0x4c88Ba3D6Cb4cF1a0916D5548470a8bA67cAF171",
 		"time": "2022-06-16 14:45:57"
+	},
+	"Dashboard": {
+		"address": "0xEE18AD042cC8EB3A44C3022ce454B1d222093abF",
+		"time": "2022-06-24 15:50:13"
 	}
 }

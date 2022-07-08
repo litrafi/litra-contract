@@ -76,6 +76,16 @@ contract AuctionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftRecei
         }));
     }
 
+    // ======== External View ======== //
+
+    function auctionsLength() external view returns(uint256) {
+        return auctions.length;
+    }
+
+    function bidsLength() external view returns(uint256) {
+        return bids.length;
+    }
+
     // ======== External Modify ======== //
 
     /**

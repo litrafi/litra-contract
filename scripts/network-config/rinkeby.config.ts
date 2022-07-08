@@ -7,11 +7,11 @@ export const NETWORK_CONFIG_RINKEBY: CommonNetworkConfig = {
     tokensInfo: {
         USDT: {
             address: '0x654327aE89e8A891B874B443e116CC6aCe7aDAE1',
-            dataFeed: '0x96156986c01FbE976D507a63dA5235511f7bF44a'
+            dataFeed: '0x42b9aa0e7d33c9e300398e003f1fF7ED22bc9639'
         },
         USDC: {
             address: '0xD33904896c2CE7Ff4f69b32F95ffFf884983FA61',
-            dataFeed: '0xa24de01df22b63d23Ebc1882a5E3d4ec0d907bFB'
+            dataFeed: '0x42b9aa0e7d33c9e300398e003f1fF7ED22bc9639'
         },
         ETH: {
             address: ZERO,

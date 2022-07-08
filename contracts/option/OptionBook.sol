@@ -57,6 +57,12 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         config = _config;
     }
 
+    // ======== Public View ======== //
+    
+    function optionsLength() public view returns(uint) {
+        return options.length;
+    }
+
     // ======== External Modify ======== //
 
     function createOption(

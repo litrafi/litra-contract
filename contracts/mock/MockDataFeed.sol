@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 contract MockDataFeed {
     int256 private price;
-    uint256 public decimals = 8;
+    uint8 public decimals = 8;
 
     constructor(int256 _price) {
         price = _price;

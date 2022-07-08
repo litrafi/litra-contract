@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "../PublicConfig.sol";
 import "../tokenize/Ntoken.sol";
 import "../libs/TransferLib.sol";
+import "../NtokenPricer.sol";
 
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -50,6 +51,7 @@ contract LendBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     uint256 public totalTnfts;
     PublicConfig public config;
+    NtokenPricer public pricer;
     uint256 public totalInterests;
 
     Lend[] public lends;
@@ -59,6 +61,11 @@ contract LendBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         __ReentrancyGuard_init();
 
         config = _config;
+    }
+    // ======== External View ======== //
+
+    function lendsLength() external view returns(uint256) {
+        return lends.length;
     }
 
     // ======== External Modify ======== //

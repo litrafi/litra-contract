@@ -11,7 +11,7 @@ import { E18, ZERO } from "../../scripts/lib/constant";
 import { construcAndWait, getContractAt } from "../../scripts/lib/utils";
 import { getNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser"
-import { MockERC20, Nft, NftVault, Ntoken, NtokenPricer, OrderBook, UniswapV2Factory, UniswapV2Router02, WBNB } from "../../typechain";
+import { MockERC20, Nft, NftVault, Ntoken, NtokenPricer, OrderBook, UniswapV2Factory, UniswapV2Router, WBNB } from "../../typechain";
 import { MockERC1155 } from "../../typechain/MockERC1155";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployMockNft, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
@@ -22,7 +22,7 @@ describe("Tokenize", () => {
     let nftVaultContract: NftVault & Contract;
     let nftContract: Nft & Contract;
     let factoryContract: UniswapV2Factory & Contract;
-    let routerContract: UniswapV2Router02 & Contract;
+    let routerContract: UniswapV2Router & Contract;
     let orderBookContract: OrderBook & Contract;
     let pricerContract: NtokenPricer & Contract;
     let weth: WBNB & Contract;
