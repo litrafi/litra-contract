@@ -35,11 +35,7 @@ contract NtokenFactory is OwnableUpgradeable {
     function createNtoken(string memory name_, string memory symbol_, uint256 supply_, address to_) external returns (address ntoken) {
         require(msg.sender == ntokenCreator, 'Forbidden creating TNFT');
         bytes memory bytecode = constructorByteCode(name_, symbol_, supply_, to_);
-        bytes32 salt = keccak256(abi.encodePacked(name_, symbol_, supply_, to_));
-        // assembly {
-        //     ntoken := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        // }
-        // require(ntoken != address(0), "Create2: Failed on deploy");
+        bytes32 salt = keccak256(abi.encodePacked(block.timestamp));
         ntoken = Create2.deploy(0, salt, bytecode);
         ntokens.add(ntoken);
 

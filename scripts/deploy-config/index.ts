@@ -2,11 +2,13 @@ import { network } from "hardhat"
 import { DeployConfig } from "../type";
 import { isTestEnv } from "../network-config";
 import { DEPLOY_CONFIG_RINKEBY } from "./rinkeby.config";
+import { DEPLOY_CONFIG_ROPSTEN } from "./ropsten.config";
 
 const configs: {
     [key in string]: DeployConfig
 } = {
-    rinkeby: DEPLOY_CONFIG_RINKEBY
+    rinkeby: DEPLOY_CONFIG_RINKEBY,
+    ropsten: DEPLOY_CONFIG_ROPSTEN
 }
 
 export function getDeployConfig(): DeployConfig {

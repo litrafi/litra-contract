@@ -59,6 +59,11 @@ const config: HardhatUserConfig = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    ropsten: {
+      url: "https://ropsten.infura.io/v3/e15030b2cb93458ea41651c02afee982",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
     bnbTestnet: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
       accounts:
@@ -69,9 +74,12 @@ const config: HardhatUserConfig = {
   //   enabled: process.env.REPORT_GAS !== undefined,
   //   currency: "USD",
   // },
-  // etherscan: {
-  //   apiKey: process.env.ETHERSCAN_API_KEY,
-  // },
+  etherscan: {
+    apiKey: {
+      rinkeby: process.env.ETHERSCAN_API_KEY,
+      ropsten: process.env.ETHERSCAN_API_KEY,
+    }
+  },
 };
 
 export default config;
