@@ -1,5 +1,6 @@
 import { network } from "hardhat";
 import { CommonNetworkConfig } from "../type";
+import { NETWORK_CONFIG_BNBTESTNET } from "./bnbTestnet.config";
 import { NETWORK_CONFIG_RINKEBY } from "./rinkeby.config";
 import { NETWORK_CONFIG_ROPSTEN } from "./ropsten.config";
 
@@ -7,7 +8,8 @@ const networkConfigs: {
     [key in string]: CommonNetworkConfig
 } = {
     rinkeby: NETWORK_CONFIG_RINKEBY,
-    ropsten: NETWORK_CONFIG_ROPSTEN
+    ropsten: NETWORK_CONFIG_ROPSTEN,
+    bnbTestnet: NETWORK_CONFIG_BNBTESTNET
 }
 
 export function getNetworkConfig(): CommonNetworkConfig {

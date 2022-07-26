@@ -3,12 +3,14 @@ import { DeployConfig } from "../type";
 import { isTestEnv } from "../network-config";
 import { DEPLOY_CONFIG_RINKEBY } from "./rinkeby.config";
 import { DEPLOY_CONFIG_ROPSTEN } from "./ropsten.config";
+import { DEPLOY_CONFIG_BNBTEST } from "./bnbTestnet.config";
 
 const configs: {
     [key in string]: DeployConfig
 } = {
     rinkeby: DEPLOY_CONFIG_RINKEBY,
-    ropsten: DEPLOY_CONFIG_ROPSTEN
+    ropsten: DEPLOY_CONFIG_ROPSTEN,
+    bnbTestnet: DEPLOY_CONFIG_BNBTEST
 }
 
 export function getDeployConfig(): DeployConfig {
