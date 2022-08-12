@@ -11,6 +11,7 @@ contract PublicConfig is OwnableUpgradeable {
     address public weth;
     address public usdt;
     NtokenFactory public ntokenFactory;
+    uint24 constant public DEFAULT_SWAP_FEE = 3000;
     EnumerableSetUpgradeable.AddressSet private tokenPriceWhitelist;
 
     function initialize(

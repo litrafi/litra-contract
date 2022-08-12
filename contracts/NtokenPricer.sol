@@ -1,8 +1,10 @@
 pragma solidity ^0.8.0;
 
 import "./PublicConfig.sol";
-import "./interfaces/Amm.sol";
 import "./order/OrderBook.sol";
+
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -12,20 +14,24 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 contract NtokenPricer is OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
-    AmmRouter public router;
+    IUniswapV3Factory public factory;
     OrderBook public orderBook;
     PublicConfig public config;
     // token address => dataFeed, for geting price from ChainLink: https://docs.chain.link/docs/get-the-latest-price/
     mapping(address => address) public dataFeeds;
+    uint256 constant private MAX_INT = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    uint256 constant private Q_MULTIPLIER = 4 ** 96;
+    uint64 constant private TNFT_DECIMALS_MULTIPLIER = 1e18;
+    uint256 constant private Q_TNFT_DECIMALS_MULTIPLIER = Q_MULTIPLIER * TNFT_DECIMALS_MULTIPLIER;
 
     function initialize(
-        AmmRouter _router,
+        IUniswapV3Factory _factory,
         OrderBook _orderBook,
         PublicConfig _config
     ) public initializer {
         __Ownable_init();
 
-        router = _router;
+        factory = _factory;
         orderBook = _orderBook;
         config = _config;
     }
@@ -57,25 +63,22 @@ contract NtokenPricer is OwnableUpgradeable {
     function getPriceFromAmm(address _tnft, address _pricingToken) public view returns(uint256) {
         _pricingToken = _pricingToken == address(0) ? config.weth() : _pricingToken;
 
-        AmmFactory factory = AmmFactory(router.factory());
         // check wheter AMM enable
-        address pair = factory.getPair(_tnft, _pricingToken);
-        if(pair == address(0)) {
+        address pool = factory.getPool(_tnft, _pricingToken, config.DEFAULT_SWAP_FEE());
+        if(pool == address(0)) {
             return 0;
         }
         // Get price by reserves
-        (uint256 reserve0, uint256 reserve1, )= AmmPair(pair).getReserves();
-        address token0 = AmmPair(pair).token0();
-        uint256 reserveTnft;
-        uint256 reservePricingToken;
-        if(token0 == _tnft) {
-            reserveTnft = reserve0;
-            reservePricingToken = reserve1;
+        (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
+        // tnft is token1
+        if(_tnft > _pricingToken) {
+            uint256 price = uint256(sqrtPriceX96).mul(sqrtPriceX96);
+            return price < MAX_INT.div(TNFT_DECIMALS_MULTIPLIER)
+                ? price.mul(TNFT_DECIMALS_MULTIPLIER).div(Q_MULTIPLIER)
+                : price.div(Q_MULTIPLIER).mul(TNFT_DECIMALS_MULTIPLIER);
         } else {
-            reserveTnft = reserve1;
-            reservePricingToken = reserve0;
+            return Q_TNFT_DECIMALS_MULTIPLIER.div(sqrtPriceX96).div(sqrtPriceX96);
         }
-        return uint(1e18).mul(reservePricingToken).div(reserveTnft);
     }
 
     function getValuation(address token, uint256 amount) public view returns(uint256) {

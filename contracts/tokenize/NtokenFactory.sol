@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "./Ntoken.sol";
-import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
@@ -34,23 +33,21 @@ contract NtokenFactory is OwnableUpgradeable {
     
     function createNtoken(string memory name_, string memory symbol_, uint256 supply_, address to_) external returns (address ntoken) {
         require(msg.sender == ntokenCreator, 'Forbidden creating TNFT');
-        bytes memory bytecode = constructorByteCode(name_, symbol_, supply_, to_);
-        bytes32 salt = keccak256(abi.encodePacked(block.timestamp));
-        ntoken = Create2.deploy(0, salt, bytecode);
+        ntoken = address(new Ntoken(name_, symbol_, supply_, to_));
         ntokens.add(ntoken);
 
         emit NtokenCreated(ntoken, to_, supply_);
     }
 
-    function constructorByteCode(string memory name_, string memory symbol_, uint256 supply_, address to_) public pure returns (bytes memory) {
-        bytes memory bytecode = type(Ntoken).creationCode;
-        return abi.encodePacked(bytecode, abi.encode(name_, symbol_, supply_, to_));
-    }
+    // function constructorByteCode(string memory name_, string memory symbol_, uint256 supply_, address to_) public pure returns (bytes memory) {
+    //     bytes memory bytecode = type(Ntoken).creationCode;
+    //     return abi.encodePacked(bytecode, abi.encode(name_, symbol_, supply_, to_));
+    // }
 
-    function computeAddress(string memory name_, string memory symbol_, uint256 supply_, address to_) external view returns(address) {
-        bytes memory bytecode = constructorByteCode(name_, symbol_, supply_, to_);
-        bytes32 salt = keccak256(abi.encodePacked(name_, symbol_, supply_, to_));
+    // function computeAddress(string memory name_, string memory symbol_, uint256 supply_, address to_) external view returns(address) {
+    //     bytes memory bytecode = constructorByteCode(name_, symbol_, supply_, to_);
+    //     bytes32 salt = keccak256(abi.encodePacked(name_, symbol_, supply_, to_));
 
-        return Create2.computeAddress(salt, keccak256(bytecode));
-    }
+    //     return Create2.computeAddress(salt, keccak256(bytecode));
+    // }
 }

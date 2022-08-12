@@ -4,26 +4,25 @@ import "./PublicConfig.sol";
 import "./interfaces/Amm.sol";
 import "./order/OrderBook.sol";
 
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
 contract Dashboard is OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
-    AmmRouter public router;
-    AmmFactory public factory;
+    IUniswapV3Factory public factory;
     OrderBook public orderBook;
     PublicConfig public config;
 
     function initialize(
-        AmmRouter _router,
+        IUniswapV3Factory _fatory,
         OrderBook _orderBook,
         PublicConfig _config
     ) external initializer {
         __Ownable_init();
 
-        router = _router;
-        factory = AmmFactory(router.factory());
+        factory = _fatory;
         orderBook = _orderBook;
         config = _config;
     }
@@ -36,13 +35,13 @@ contract Dashboard is OwnableUpgradeable {
             if(pricingToken == address(0)) {
                 pricingToken = config.weth();
             }
-            address pair = factory.getPair(pricingToken, _tnft);
-            if(pair == address(0)) {
+            address pool = factory.getPool(pricingToken, _tnft, config.DEFAULT_SWAP_FEE());
+            if(pool == address(0)) {
                 continue;
             }
-            address token0 = AmmPair(pair).token0();
-            (uint256 reserve0, uint256 reserve1, ) = AmmPair(pair).getReserves();
-            if(token0 == _tnft) {
+            uint256 reserve0 = IUniswapPool(pool).balance0();
+            uint256 reserve1 = IUniswapPool(pool).balance1();
+            if(IUniswapPool(pool).token0() == _tnft) {
                 ammSupply = ammSupply.add(reserve0);
             } else {
                 ammSupply = ammSupply.add(reserve1);
