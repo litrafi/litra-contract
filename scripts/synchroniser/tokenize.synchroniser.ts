@@ -1,6 +1,7 @@
 import { getDeployConfig } from "../deploy-config";
-import { UniswapFactoryDeployer } from "../deployer/amm/factory.deployer";
-import { UniswapRouterDeployer } from "../deployer/amm/router.deployer";
+import { UniswapV3FactoryDeployer } from "../deployer/amm/factory.deployer";
+import { PositionManagerDeployer } from "../deployer/amm/position-manager.deployer";
+import { SwapRouterDeployer } from "../deployer/amm/router.deployer";
 import { NtokenPricerDeployer } from "../deployer/ntoken-pricer.deployer";
 import { OrderBookDeployer } from "../deployer/order/order-book.deployer";
 import { PublicConfigDeployer } from "../deployer/public-config.deployer";
@@ -11,16 +12,15 @@ import { getDifferent } from "../lib/utils";
 import { getNetworkConfig } from "../network-config";
 
 declare type SynchroniserConfig = {
-    feeTo: string,
     pricingTokens: {
         address: string,
         dataFeed: string
-    }[]
+    }[],
 }
 
 export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
     protected getConfigFromFile(): SynchroniserConfig {
-        const { feeTo, pricingTokens } = getDeployConfig();
+        const { pricingTokens } = getDeployConfig();
         const { tokensInfo } = getNetworkConfig();
         const _pricingTokens: SynchroniserConfig['pricingTokens'] = []
         for (const tokenName of pricingTokens) {
@@ -31,15 +31,12 @@ export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
                 dataFeed
             })
         }
-        return { feeTo, pricingTokens: _pricingTokens };
+        return { pricingTokens: _pricingTokens };
     }
 
     protected async getConfigOnline(): Promise<SynchroniserConfig> {
-        const factory = await new UniswapFactoryDeployer().getInstance();
         const pricer = await new NtokenPricerDeployer().getInstance();
         const publicConfig = await new PublicConfigDeployer().getInstance();
-
-        const feeTo = await factory.feeTo();
 
         const pricingTokens = await publicConfig.getPricingTokens();
         const _pricingTokens: SynchroniserConfig['pricingTokens'] = [];
@@ -50,7 +47,7 @@ export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
                 dataFeed
             })
         }
-        return { feeTo, pricingTokens: _pricingTokens };
+        return { pricingTokens: _pricingTokens };
     }
 
     protected hasDeployed(): boolean {
@@ -67,11 +64,12 @@ export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
             factory: factory.address,
             pricingToken: fileConfig.pricingTokens.map(e => e.address)
         });
-        const ammFactory = await new UniswapFactoryDeployer().getOrDeployInstance({ feeTo: fileConfig.feeTo });
-        const ammRouter = await new UniswapRouterDeployer().getOrDeployInstance({ factory: ammFactory.address, weth });
+        const ammFactory = await new UniswapV3FactoryDeployer().getOrDeployInstance({});
+        await new SwapRouterDeployer().getOrDeployInstance({ factory: ammFactory.address, weth });
+        await new PositionManagerDeployer().getOrDeployInstance({ factory: ammFactory.address, weth });
         const orderBook = await new OrderBookDeployer().getOrDeployInstance({ config: publicConfig.address });
         const ntokenPricer = await new NtokenPricerDeployer().getOrDeployInstance({
-            ammRouter: ammRouter.address,
+            factory: ammFactory.address,
             orderBook: orderBook.address,
             config: publicConfig.address,
             dataFeeds: fileConfig.pricingTokens.map(e => ({ tokenAddress: e.address, dataFeed: e.dataFeed }))
@@ -87,10 +85,10 @@ export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
     protected getSynchroniseFuncs() {
         return {
             feeTo: async (fileConfig: string) => {
-                const factory = await new UniswapFactoryDeployer().getInstance();
+                const factory = await new UniswapV3FactoryDeployer().getInstance();
                 await factory.setFeeTo(fileConfig);
             },
-            pricingTokens: this.synchronisePricingToken.bind(this)
+            pricingTokens: this.synchronisePricingToken.bind(this),
         }
     }
 

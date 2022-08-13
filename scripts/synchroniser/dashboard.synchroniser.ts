@@ -1,4 +1,4 @@
-import { UniswapRouterDeployer } from "../deployer/amm/router.deployer";
+import { UniswapV3FactoryDeployer } from "../deployer/amm/factory.deployer";
 import { DashboardDeployer } from "../deployer/dashboard.deployer";
 import { OrderBookDeployer } from "../deployer/order/order-book.deployer";
 import { PublicConfigDeployer } from "../deployer/public-config.deployer";
@@ -20,12 +20,12 @@ export class DashboardSynchroniser extends Synchroniser<SynchroniseConfig> {
     }
 
     protected async deploy(fileConfig: SynchroniseConfig): Promise<void> {
-        const router = await new UniswapRouterDeployer().getInstance();
+        const factory = await new UniswapV3FactoryDeployer().getInstance();
         const order = await new OrderBookDeployer().getInstance();
         const config = await new PublicConfigDeployer().getInstance();
 
         await new DashboardDeployer().getOrDeployInstance({
-            router: router.address,
+            factory: factory.address,
             order: order.address,
             config: config.address
         })

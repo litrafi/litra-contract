@@ -1,20 +1,19 @@
-import { UniswapV2Router } from "../../../typechain";
+import { SwapRouter } from "../../../typechain";
 import { ContractDeployer } from "../../lib/deployer";
 import { construcAndWait } from "../../lib/utils";
 
-declare type DeployerArgs = {
+type DeployArgs = {
     factory: string,
     weth: string
 }
 
-export class UniswapRouterDeployer extends ContractDeployer<UniswapV2Router, DeployerArgs> {
+export class SwapRouterDeployer extends ContractDeployer<SwapRouter, DeployArgs> {
     protected getDeployerConfig(): { contractName: string; recorderKey?: string | undefined; } {
-        return { contractName: 'UniswapV2Router', recorderKey: 'UniswapV2Router'}
+        return { contractName: 'SwapRouter', recorderKey: 'SwapRouter'}
     }
 
-    protected async _deploy(args: DeployerArgs): Promise<string> {
+    protected async _deploy(args: DeployArgs): Promise<string> {
         const router = await construcAndWait(this.contractName, [args.factory, args.weth]);
         return router.address;
     }
-
 }
