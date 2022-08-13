@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Contract, BigNumber } from "ethers";
-import { UniswapFactoryDeployer } from "../scripts/deployer/amm/factory.deployer";
-import { UniswapRouterDeployer } from "../scripts/deployer/amm/router.deployer";
+import { UniswapV3FactoryDeployer } from "../scripts/deployer/amm/factory.deployer";
+import { PositionManagerDeployer } from "../scripts/deployer/amm/position-manager.deployer";
 import { DashboardDeployer } from "../scripts/deployer/dashboard.deployer";
 import { OrderBookDeployer } from "../scripts/deployer/order/order-book.deployer";
 import { NftVaultDeployer } from "../scripts/deployer/tokenize/nft-vault.deployer";
@@ -10,10 +10,10 @@ import { getContractAt, getSelfAddress } from "../scripts/lib/utils";
 import { getNetworkConfig } from "../scripts/network-config";
 import { DashboardSynchroniser } from "../scripts/synchroniser/dashboard.synchroniser";
 import { TokenizeSynchroniser } from "../scripts/synchroniser/tokenize.synchroniser";
-import { WBNB } from "../typechain";
+import { UniswapV3Pool, WBNB } from "../typechain";
 import { Dashboard } from "../typechain/Dashboard";
 import { deployMockNtoken, mockEnvForTokenizeModule } from "./mock-util/deploy.util";
-import { clear, currentTime } from "./mock-util/env.util"
+import { clear } from "./mock-util/env.util"
 
 describe('Dashboard', () => {
     let dashboardContract: Dashboard & Contract;
@@ -36,28 +36,37 @@ describe('Dashboard', () => {
         const vault = await new NftVaultDeployer().getInstance();
         const tnft = await deployMockNtoken(vault);
         const self = await getSelfAddress();
+        const SQRT_PRICE = BigNumber.from(2).pow(96);
+        const FEE_RATIO = '3000';
         // add liquidity to amm
-        const routerContract = await new UniswapRouterDeployer().getInstance();
-        const factoryContract = await new UniswapFactoryDeployer().getInstance();
+        const factoryContract = await new UniswapV3FactoryDeployer().getInstance();
+        const positionManager = await new PositionManagerDeployer().getInstance();
         // create pair
-        await factoryContract.createPair(tnft.address, weth.address);
-        const pair = await factoryContract.getPair(tnft.address, weth.address);
+        await factoryContract.createPool(tnft.address, weth.address, FEE_RATIO);
+        const pairAddress = await factoryContract.getPool(tnft.address, weth.address, FEE_RATIO);
+        const pairContract = await getContractAt<UniswapV3Pool>('UniswapV3Pool', pairAddress);
+        await pairContract.initialize(SQRT_PRICE);
+        const token0 = await pairContract.token0();
+        const token1 = await pairContract.token1();
+        const { tick } = await pairContract.slot0();        
+        const tickSpacing = await pairContract.tickSpacing();
         // add liquidity
         const TNFT_AMOUNT = BigNumber.from(E18);
         const WETH_AMOUNT = BigNumber.from(E18);
-        await weth.deposit({ value: WETH_AMOUNT });
-        await tnft.approve(routerContract.address, TNFT_AMOUNT);
-        await weth.approve(routerContract.address, WETH_AMOUNT);
-        const now = await currentTime();
-        await routerContract.addLiquidity(
-            tnft.address,
-            weth.address,
-            TNFT_AMOUNT,
-            WETH_AMOUNT,
-            0, 0,
-            self,
-            now + 1
-        );
+        await tnft.approve(positionManager.address, TNFT_AMOUNT);
+        await positionManager.mint({
+            token0,
+            token1,
+            fee: FEE_RATIO,
+            amount0Desired: TNFT_AMOUNT,
+            amount1Desired: WETH_AMOUNT,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: self,
+            deadline: '9999999999',
+            tickLower: tick - tickSpacing,
+            tickUpper: tick + tickSpacing
+        }, { value: WETH_AMOUNT })
         // add liquidity to order
         const orderBookContract = await new OrderBookDeployer().getInstance();
         const SELL_AMOUNT = BigNumber.from(E18);
