@@ -3,7 +3,6 @@ import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import { writeTestDeployConfig } from "../../scripts/deploy-config";
-import { UniswapFactoryDeployer } from "../../scripts/deployer/amm/factory.deployer";
 import { PublicConfigDeployer } from "../../scripts/deployer/public-config.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
 import { SychroniseResult } from "../../scripts/lib/synchroniser";
@@ -52,29 +51,6 @@ describe('Synchroniser for tokenize module', () => {
         setNetworkConfig(networkConfig);
 
         users = await ethers.getSigners();
-    })
-
-    it('Synchronise feeTo', async () => {
-        const deployConfig: DeployConfig = {
-            feeTo: users[0].address,
-            pricingTokens: ['USDT']
-        }
-        // deploy
-        writeTestDeployConfig(deployConfig);
-        const sychorniser = new TokenizeSynchroniser();
-        await sychorniser.sychornise();
-        // confirm
-        const factory = await new UniswapFactoryDeployer().getInstance();
-        let feeTo = await factory.feeTo();
-        expect(feeTo).eq(deployConfig.feeTo);
-        // change deploy config
-        deployConfig.feeTo = users[1].address;
-        writeTestDeployConfig(deployConfig);
-        const result = await sychorniser.sychornise();
-        expect(result).eq(SychroniseResult.CONFIG_CHANGE);
-        // confirm
-        feeTo = await factory.feeTo();
-        expect(feeTo).eq(deployConfig.feeTo);
     })
 
     it('Syncrhonise pricing token', async () => {

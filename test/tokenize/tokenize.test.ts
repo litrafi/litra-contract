@@ -2,8 +2,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
-import { UniswapFactoryDeployer } from "../../scripts/deployer/amm/factory.deployer";
-import { UniswapRouterDeployer } from "../../scripts/deployer/amm/router.deployer";
+import { UniswapV3FactoryDeployer } from "../../scripts/deployer/amm/factory.deployer";
+import { PositionManagerDeployer } from "../../scripts/deployer/amm/position-manager.deployer";
 import { NtokenPricerDeployer } from "../../scripts/deployer/ntoken-pricer.deployer";
 import { OrderBookDeployer } from "../../scripts/deployer/order/order-book.deployer";
 import { NftVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
@@ -11,18 +11,18 @@ import { E18, ZERO } from "../../scripts/lib/constant";
 import { construcAndWait, getContractAt } from "../../scripts/lib/utils";
 import { getNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser"
-import { MockERC20, Nft, NftVault, Ntoken, NtokenPricer, OrderBook, UniswapV2Factory, UniswapV2Router, WBNB } from "../../typechain";
+import { MockERC20, Nft, NftVault, NonfungiblePositionManager, Ntoken, NtokenPricer, OrderBook, UniswapV3Factory, UniswapV3Pool, WBNB } from "../../typechain";
 import { MockERC1155 } from "../../typechain/MockERC1155";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployMockNft, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
-import { clear, currentTime } from "../mock-util/env.util";
+import { clear } from "../mock-util/env.util";
 import { expectCloseTo } from "../mock-util/expect-plus.util";
 
 describe("Tokenize", () => {
     let nftVaultContract: NftVault & Contract;
     let nftContract: Nft & Contract;
-    let factoryContract: UniswapV2Factory & Contract;
-    let routerContract: UniswapV2Router & Contract;
+    let factoryContract: UniswapV3Factory & Contract;
+    let positionManager: NonfungiblePositionManager & Contract;
     let orderBookContract: OrderBook & Contract;
     let pricerContract: NtokenPricer & Contract;
     let weth: WBNB & Contract;
@@ -48,10 +48,10 @@ describe("Tokenize", () => {
         weth = await getContractAt<WBNB>('WBNB', networkConfig.weth);
         usdt = await getContractAt<MockERC20>('MockERC20', networkConfig.tokensInfo.USDT.address);
         nftVaultContract = await new NftVaultDeployer().getInstance();
-        factoryContract = await new UniswapFactoryDeployer().getInstance();
-        routerContract = await new UniswapRouterDeployer().getInstance();
+        factoryContract = await new UniswapV3FactoryDeployer().getInstance();
         orderBookContract = await new OrderBookDeployer().getInstance();
         pricerContract = await new NtokenPricerDeployer().getInstance();
+        positionManager = await new PositionManagerDeployer().getInstance();
         nftContract = await deployMockNft(creator.address);
         tokenId = 0;
     })
@@ -104,6 +104,8 @@ describe("Tokenize", () => {
         const TOKEN_NAME = 'MockNft';
         const DESCRIPTION = 'description of MockNft';
         const TNFT_NAME = 'MockTNFT'
+        const SQRT_PRICE = BigNumber.from(2).pow(96);
+        const FEE_RATIO = '3000';
         await nftContract.approve(nftVaultContract.address, 0);
         await nftVaultContract.deposit(
             nftContract.address,
@@ -117,26 +119,34 @@ describe("Tokenize", () => {
         const nftInfo = await nftVaultContract.nftInfo(1);
         const tnft = await getContractAt<Ntoken>('Ntoken', nftInfo.ntokenAddress);
         // create pair
-        await factoryContract.createPair(tnft.address, weth.address);
+        await factoryContract.createPool(tnft.address, weth.address, FEE_RATIO);
+        const pairAddress = await factoryContract.getPool(tnft.address, weth.address, FEE_RATIO);
+        const pairContract = await getContractAt<UniswapV3Pool>('UniswapV3Pool', pairAddress);
+        await pairContract.initialize(SQRT_PRICE);
+        const token0 = await pairContract.token0();
+        const token1 = await pairContract.token1();
+        const { tick } = await pairContract.slot0();        
+        const tickSpacing = await pairContract.tickSpacing();
         // add liquidity
         const TNFT_AMOUNT = BigNumber.from(E18).mul(2);
         const WETH_AMOUNT = BigNumber.from(E18).mul(2);
-        await weth.deposit({ value: WETH_AMOUNT });
-        await tnft.approve(routerContract.address, TNFT_AMOUNT);
-        await weth.approve(routerContract.address, WETH_AMOUNT);
-        const now = await currentTime();
-        await routerContract.addLiquidity(
-            tnft.address,
-            weth.address,
-            TNFT_AMOUNT,
-            WETH_AMOUNT,
-            0, 0,
-            creator.address,
-            now + 1
-        )
+        await tnft.approve(positionManager.address, TNFT_AMOUNT);
+        await positionManager.mint({
+            token0,
+            token1,
+            fee: FEE_RATIO,
+            amount0Desired: TNFT_AMOUNT,
+            amount1Desired: WETH_AMOUNT,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: creator.address,
+            deadline: '9999999999',
+            tickLower: tick - tickSpacing,
+            tickUpper: tick + tickSpacing
+        }, { value: WETH_AMOUNT })
         // Get price from amm
         const priceFromAmm = await pricerContract.getPriceFromAmm(tnft.address, weth.address);
-        expect(priceFromAmm).eq(BigNumber.from('1000000000000000000'));
+        expect(priceFromAmm).eq(BigNumber.from(E18));
         // Make an order transaction
         const SELL_AMOUNT = BigNumber.from(E18).mul(2);
         const PRICE = BigNumber.from(E18);
@@ -157,6 +167,7 @@ describe("Tokenize", () => {
         expect(priceFromOrder).eq(BigNumber.from(E18).div(2));
         // Get price from pricer
         const { pricingToken, amount, maxValuation: price } = await pricerContract.getTnftPrice(tnft.address);
+        console.log(getNetworkConfig())
         expect(pricingToken).eq(ZERO);
         expect(amount).eq(priceFromAmm);
         // Redemm
@@ -213,6 +224,7 @@ describe("Tokenize", () => {
         const SELL_AMOUNT = BigNumber.from(E18).mul(2);
         const PRICE = BigNumber.from(E18);
         await tnft.approve(orderBookContract.address, SELL_AMOUNT);
+        console.log(tnft.address);
         await orderBookContract.placeOrder(
             tnft.address,
             SELL_AMOUNT,
@@ -224,8 +236,8 @@ describe("Tokenize", () => {
             .buyOrder(0, { value: PRICE });
         // check collection value
         const wethValue = await pricerContract.getValuation(ZERO, SUPPLY.sub(SELL_AMOUNT).mul(PRICE).div(SELL_AMOUNT));
-        const collectionValue = await nftVaultContract.getUserCollectionValue(creator.address);
-        expect(collectionValue).eq(wethValue);
+        const { totalValuation } = await nftVaultContract.getUserCollection(creator.address);
+        expect(totalValuation).eq(wethValue);
     })
 
     it('Deposit & Redeem ERC1155', async () => {
