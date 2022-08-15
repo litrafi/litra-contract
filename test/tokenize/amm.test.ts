@@ -4,12 +4,13 @@ import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import { UniswapV3FactoryDeployer } from "../../scripts/deployer/amm/factory.deployer";
 import { PositionManagerDeployer } from "../../scripts/deployer/amm/position-manager.deployer";
+import { QuoterDeployer } from "../../scripts/deployer/amm/quoter.deployer";
 import { SwapRouterDeployer } from "../../scripts/deployer/amm/router.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
 import { getContractAt } from "../../scripts/lib/utils";
 import { getNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
-import { NonfungiblePositionManager, SwapRouter, UniswapV3Factory, UniswapV3Pool, WBNB } from "../../typechain";
+import { NonfungiblePositionManager, Quoter, SwapRouter, UniswapV3Factory, UniswapV3Pool, WBNB } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployERC20Token, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear } from "../mock-util/env.util";
@@ -21,6 +22,7 @@ describe('Amm', () => {
     let factoryContract: UniswapV3Factory & Contract;
     let routerContract: SwapRouter & Contract;
     let positionManager: NonfungiblePositionManager & Contract;
+    let quoter: Quoter & Contract;
 
     let weth: WBNB & Contract;
 
@@ -40,6 +42,7 @@ describe('Amm', () => {
         factoryContract = await new UniswapV3FactoryDeployer().getInstance();
         routerContract = await new SwapRouterDeployer().getInstance();
         positionManager = await new PositionManagerDeployer().getInstance();
+        quoter = await new QuoterDeployer().getInstance();
     })
 
     it('Create pool & swap', async () => {
@@ -78,10 +81,20 @@ describe('Amm', () => {
         }, { value: DEPOSIT_AMOUNT })
         await comparator.setAfterBalance(tnft.address);
         expect(comparator.compare(tnft.address).eq(DEPOSIT_AMOUNT))
-
-        // swap
+        // Swap
         const SWAP_AMOUNT = BigNumber.from(E18);
-
+        // estimate
+        const { amountOut } = await quoter.callStatic.quoteExactInputSingle(
+            {
+                tokenIn: tnft.address,
+                tokenOut: weth.address,
+                fee: FEE_RATIO,
+                amountIn: SWAP_AMOUNT,
+                sqrtPriceLimitX96: 0
+            }
+        );
+        expectCloseTo(amountOut, SWAP_AMOUNT, 2);
+        // swap
         await tnft.mint(user.address, SWAP_AMOUNT);
         await tnft.approve(routerContract.address, SWAP_AMOUNT);
         await weth.approve(routerContract.address, SWAP_AMOUNT);
@@ -106,5 +119,6 @@ describe('Amm', () => {
         await comparator.setAfterBalance(ZERO);
         expect(comparator.compare(tnft.address).eq(SWAP_AMOUNT))
         expectCloseTo(comparator.compare(ZERO), SWAP_AMOUNT, 2);
+        expectCloseTo(comparator.compare(ZERO), amountOut, 2);
     })
 })
