@@ -97,49 +97,146 @@ enum NftStatus{
 
 ## AMM
 
-### UniswapV2Factory
+### UniswapV3Factory
 
-#### 创建币对
-- 函数定义: function createPair(address tokenA, address tokenB) external returns (address pair)
+#### 创建流动池
+- 函数定义: function createPool(
+        address tokenA,
+        address tokenB,
+        uint24 fee
+    ) external override noDelegateCall returns (address pool)
 - tokenA,tokenB: 组成币对的两币地址
+- fee: 默认传3000
 
-### UniswapV2Router
+#### 获取流动池地址
+- 函数定义: function getPool(
+        address tokenA,
+        address tokenB,
+        uint24 fee
+    ) external view returns (address pool);
+- tokenA,tokenB: 组成币对的两币地址
+- fee: 默认传3000
+- pool: 流动池地址
+
+### Qouter
 
 #### 查询兑换价格
-- 函数定义: function getAmountsOut(uint amountIn, address[] memory path) returns (uint[] memory amounts)
-- amountIn: 被兑换币的数量
-- path: [被兑换币地址, 兑换获得币地址]，如查询20个TNFT能兑换多少ETH则调用, getAmountsOut(20 * 1e18, [TNFT地址, weth地址])
+- 函数定义: function quoteExactInputSingle(QuoteExactInputSingleParams memory params)
+        external
+        returns (
+            uint256 amountOut,
+            uint160 sqrtPriceX96After,
+            uint32 initializedTicksCrossed,
+            uint256 gasEstimate
+        );
+- struct QuoteExactInputSingleParams {
+        address tokenIn; // 给出的代币地址
+        address tokenOut; // 获得的代币地址
+        uint256 amountIn; // 给出的代币数量
+        uint24 fee; // 费率，默认3000
+        uint160 sqrtPriceLimitX96; // 默认传0
+    }
+- amountOut: 能换的的tokenOut数量
+
+### NonfungiblePositionManager
 
 #### 添加流动性
-- 函数定义: function addLiquidityETH(
-        address token,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
+- 函数定义: function mint(MintParams calldata params)
+        external
+        payable
+        override
+        checkDeadline(params.deadline)
+    returns (
+        uint256 tokenId,
+        uint128 liquidity,
+        uint256 amount0,
+        uint256 amount1
     )
-- token: TNFT地址
-- amountADesired: TNFT投入的数量
-- amountTokenMin: TNFT投入池中最小数量
-- amountETHMin: ETH投入池中的最小数量
-- to: LP接受者
-- deadline: 交易最迟完成时间
+- struct MintParams {
+        address token0;
+        address token1;
+        uint24 fee;
+        int24 tickLower;
+        int24 tickUpper;
+        uint256 amount0Desired;
+        uint256 amount1Desired;
+        uint256 amount0Min;
+        uint256 amount1Min;
+        address recipient;
+        uint256 deadline;
+    }
+- token0,token1： 两币地址
+- fee: 默认3000
+- tickLower: tick下限
+- tickUpper: tick上限
+- amount0Desired: 添加的token0数量
+- amount1Desired: 添加的token1数量
+- amount0Min: 默认传0
+- amount1Min: 默认传0
+- recipient: 仓位持有者，默认传当前用户地址
+- deadline: 交易最迟完成时间，可传999999999
 
-#### 买入指定数量的TNFT
-- 函数定义: function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
-- amountOutMin: 至少买到的TNFT数量
-- path: [Wrapped Native Token地址, TNFT地址]
-- to: 收款地址
-- deadline: 交易最迟完成时间
+### 查看仓位详情
 
-#### 卖出指定数量的TNFT
-- 函数定义: function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
-- amountIn: 卖出的TNFT数量
-- amountOutMin: 卖出所得ETH的最小数量
-- path: [TNFT地址, Wrapped Native Token地址]
-- to: 收款地址
-- deadline: 交易最迟完成时间
+- 函数定义: positions(uint256 positionId) returns (
+  uint96 nonce,
+    address operator, // 仓位持有者
+    address token0,
+    address token1,
+    uint24 fee,
+    int24 tickLower,
+    int24 tickUpper,
+    uint128 liquidity, // 流动性数量
+    uint256 feeGrowthInside0LastX128,
+    uint256 feeGrowthInside1LastX128,
+    uint128 tokensOwed0, // 可以提取的token0
+    uint128 tokensOwed1 // 可以提取的token0
+)
+
+### 查看我的仓位数量
+
+- 函数定义: function balanceOf(address owner) external view returns(uint256)
+
+### 查看用户在指定币对池的仓位
+
+- 函数定义: function positionOfSpecifiedPool(address owner, address token0, address token1, uint24 fee) public view returns(uint256)
+- 默认返回第一个仓位ID
+
+### 根据索引查询仓位ID
+- 函数定义: function positionOfOwnerByIndex(address owner, uint256 index) external view returns(uint256)
+- index: 0 <= index < balanceOf(owner) 
+
+### SwapRouter
+
+#### 换出指定数量的token
+- 函数定义: function exactInputSingle(ExactInputSingleParams calldata params)
+        external
+        payable
+    returns (uint256 amountOut)
+- struct ExactInputSingleParams {
+        address tokenIn; // 支付的代币地址
+        address tokenOut; // 换得的代币地址
+        uint24 fee; // 默认传3000
+        address recipient; // 仓位持有者，默认为当前用户地址
+        uint256 deadline; // 默认为999999999
+        uint256 amountIn; // 支付的代币数量
+        uint256 amountOutMinimum; // 期望获得的最小代币数量，可传0
+        uint160 sqrtPriceLimitX96; // 默认传0
+    }
+
+### Quoter
+
+#### 根据输入代币数量查询报价
+- 函数定义: function quoteExactInputSingle(QuoteExactInputSingleParams memory params)
+        public
+        override
+        returns (
+            uint256 amountOut, // 换出代币的数量
+            uint160 sqrtPriceX96After,
+            uint32 initializedTicksCrossed,
+            uint256 gasEstimate
+        )
+
 
 ## Order
 
