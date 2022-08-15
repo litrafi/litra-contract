@@ -122,7 +122,7 @@ contract NonfungiblePositionManager is
 
     /// @inheritdoc INonfungiblePositionManager
     function mint(MintParams calldata params)
-        external
+        public
         payable
         override
         checkDeadline(params.deadline)
@@ -183,7 +183,7 @@ contract NonfungiblePositionManager is
 
     /// @inheritdoc INonfungiblePositionManager
     function increaseLiquidity(IncreaseLiquidityParams calldata params)
-        external
+        public
         payable
         override
         checkDeadline(params.deadline)
@@ -360,12 +360,28 @@ contract NonfungiblePositionManager is
         emit Collect(params.tokenId, recipient, amount0Collect, amount1Collect);
     }
 
-    function balanceOf(address owner) external view returns(uint256) {
+    function balanceOf(address owner) public view returns(uint256) {
         return _holderPositions[owner].length();
     }
 
     function positionOfOwnerByIndex(address owner, uint256 index) external view returns(uint256) {
         return _holderPositions[owner].at(index);
+    }
+
+    function positionOfSpecifiedPool(address owner, address token0, address token1, uint24 fee) public view returns(uint256) {
+        PoolAddress.PoolKey memory poolKey = PoolAddress.getPoolKey(token0, token1, fee);
+        for (uint256 index = 0; index < balanceOf(owner); index++) {
+            uint256 positionId = _holderPositions[owner].at(index);
+            PoolAddress.PoolKey memory _poolKey = _poolIdToPoolKey[_positions[positionId].poolId];
+            if(
+                _poolKey.token0 == poolKey.token0
+                && _poolKey.token1 == poolKey.token1
+                && _poolKey.fee == poolKey.fee
+            ) {
+                return positionId;
+            }
+        }
+        return 0;
     }
 
     /// @inheritdoc INonfungiblePositionManager

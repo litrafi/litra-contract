@@ -84,11 +84,25 @@ describe('Amm', () => {
         // get position
         const positionBalance = await positionManager.balanceOf(user.address);
         expect(positionBalance.toNumber()).eq(1);
-        const positionId = await positionManager.positionOfOwnerByIndex(user.address, 0);
+        let positionId = await positionManager.positionOfOwnerByIndex(user.address, 0);
         expect(positionId).eq(1);
         let position = await positionManager.positions(positionId);
         expect(position.operator).eq(user.address);
+        positionId = await positionManager.positionOfSpecifiedPool(user.address, tnft.address, weth.address, FEE_RATIO);
+        expect(positionId).eq(1);
+        // increase liquidity
+        await tnft.mint(user.address, DEPOSIT_AMOUNT);
+        await tnft.approve(positionManager.address, DEPOSIT_AMOUNT);
+        await positionManager.increaseLiquidity({
+            tokenId: positionId,
+            amount0Desired: DEPOSIT_AMOUNT,
+            amount1Desired: DEPOSIT_AMOUNT,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: '9999999999'
+        }, { value: DEPOSIT_AMOUNT })
         // remove liquidity
+        position = await positionManager.positions(positionId);
         await positionManager.decreaseLiquidity({
             tokenId: positionId,
             liquidity: position.liquidity,
