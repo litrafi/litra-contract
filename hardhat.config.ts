@@ -54,6 +54,11 @@ const config: HardhatUserConfig = {
     ]
   },
   networks: {
+    mainnet: {
+      url: "https://mainnet.infura.io/v3/e15030b2cb93458ea41651c02afee982",
+      accounts: 
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/e15030b2cb93458ea41651c02afee982",
       accounts:
