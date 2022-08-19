@@ -20,7 +20,8 @@ import { expectCloseTo } from "../mock-util/expect-plus.util";
 
 describe("Tokenize", () => {
     let nftVaultContract: NftVault & Contract;
-    let nftContract: Nft & Contract;
+    let nftContract0: Nft & Contract;
+    let nftContract1: Nft & Contract;
     let factoryContract: UniswapV3Factory & Contract;
     let positionManager: NonfungiblePositionManager & Contract;
     let orderBookContract: OrderBook & Contract;
@@ -52,7 +53,8 @@ describe("Tokenize", () => {
         orderBookContract = await new OrderBookDeployer().getInstance();
         pricerContract = await new NtokenPricerDeployer().getInstance();
         positionManager = await new PositionManagerDeployer().getInstance();
-        nftContract = await deployMockNft(creator.address);
+        nftContract0 = await deployMockNft(creator.address);
+        nftContract1 = await deployMockNft(creator.address);
         tokenId = 0;
     })
 
@@ -64,9 +66,10 @@ describe("Tokenize", () => {
         const DESCRIPTION = 'description of MockNft';
         const TNFT_NAME = 'MockTNFT'
         // deposit
-        await nftContract.approve(nftVaultContract.address, 0);
+        await nftContract0.approve(nftVaultContract.address, 0);
+        await nftContract1.approve(nftVaultContract.address, 0);
         await nftVaultContract.deposit(
-            nftContract.address,
+            [nftContract0.address, nftContract1.address],
             TOKEN_ID,
             TOKEN_NAME,
             DESCRIPTION,
@@ -78,8 +81,9 @@ describe("Tokenize", () => {
         const nftLength = await nftVaultContract.nftInfoLength();
         const index = nftLength.toNumber() - 1;
         const nftInfo = await nftVaultContract.nftInfo(index);
+        const nftAddress = await nftVaultContract.nftAddress(index);
         expect(nftInfo.owner).eq(creator.address);
-        expect(nftInfo.nftAddress).eq(nftContract.address);
+        expect(nftAddress).deep.eq([nftContract0.address, nftContract1.address]);
         expect(nftInfo.tokenId.toNumber()).eq(0);
         expect(nftInfo.name).eq(TOKEN_NAME);
         expect(nftInfo.description).eq(DESCRIPTION);
@@ -106,9 +110,10 @@ describe("Tokenize", () => {
         const TNFT_NAME = 'MockTNFT'
         const SQRT_PRICE = BigNumber.from(2).pow(96);
         const FEE_RATIO = '3000';
-        await nftContract.approve(nftVaultContract.address, 0);
+        await nftContract0.approve(nftVaultContract.address, 0);
+        await nftContract1.approve(nftVaultContract.address, 0);
         await nftVaultContract.deposit(
-            nftContract.address,
+            [nftContract0.address, nftContract1.address],
             TOKEN_ID,
             TOKEN_NAME,
             DESCRIPTION,
@@ -178,7 +183,9 @@ describe("Tokenize", () => {
         await usdt.mint(creator.address, redeemValue);
         await usdt.approve(nftVaultContract.address, redeemValue);
         await nftVaultContract.redeem(tnft.address, tnfnBalance);
-        const nftOwner = await nftContract.ownerOf(tokenId);
+        let nftOwner = await nftContract0.ownerOf(tokenId);
+        expect(nftOwner).eq(creator.address);
+        nftOwner = await nftContract1.ownerOf(tokenId);
         expect(nftOwner).eq(creator.address);
         tnfnBalance = await tnft.balanceOf(creator.address);
         expect(tnfnBalance).eq(BigNumber.from(0));
@@ -208,9 +215,10 @@ describe("Tokenize", () => {
         const TOKEN_NAME = 'MockNft';
         const DESCRIPTION = 'description of MockNft';
         const TNFT_NAME = 'MockTNFT'
-        await nftContract.approve(nftVaultContract.address, 0);
+        await nftContract0.approve(nftVaultContract.address, 0);
+        await nftContract1.approve(nftVaultContract.address, 0);
         await nftVaultContract.deposit(
-            nftContract.address,
+            [nftContract0.address, nftContract1.address],
             TOKEN_ID,
             TOKEN_NAME,
             DESCRIPTION,
@@ -251,7 +259,7 @@ describe("Tokenize", () => {
         await erc1155Nft.mint(creator.address, 0, 1, [0]);
         await erc1155Nft.setApprovalForAll(nftVaultContract.address, true);
         await nftVaultContract.deposit(
-            erc1155Nft.address,
+            [erc1155Nft.address],
             TOKEN_ID,
             TOKEN_NAME,
             DESCRIPTION,

@@ -22,7 +22,7 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
 
     struct NftInfo {
         address owner;
-        address nftAddress;
+        address[] nftAddress;
         uint256 tokenId;
         string name;
         string description;
@@ -104,8 +104,12 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         return _nextTnftId;
     }
 
+    function nftAddress(uint256 tnftId) external view returns(address[] memory) {
+        return nftInfo[tnftId].nftAddress;
+    }
+
     function deposit(
-        address nft_,
+        address[] calldata nfts_,
         uint256 tokenId_,
         string memory name_,
         string memory description_,
@@ -113,12 +117,16 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         uint256 supply_,
         uint256 redeemRatio_
     ) external {
-        require(!address(_msgSender()).isContract(), "NftVault#deposit: sender is a contract.");
-        require(nft_ != address(0) && nft_.isContract(), "NftVault#deposit: invail nft address.");
-        require(supply_ > 0, "NftVault#redeem: ntoken supply is zero.");
-        require(redeemRatio_ > supply_.mul(50).div(100) && redeemRatio_ <= supply_, "NftVault#deposit: erro redeem amount.");
+        require(!address(_msgSender()).isContract(), "sender is a contract.");
+        require(nfts_.length > 0, "empty nft array");
+        require(supply_ > 0, "ntoken supply is zero.");
+        require(redeemRatio_ > supply_.mul(50).div(100) && redeemRatio_ <= supply_, "erro redeem amount.");
         //1. tansfer nft to vault
-        TransferLib.nftTransferFrom(nft_, _msgSender(), address(this), tokenId_);
+        for (uint256 index = 0; index < nfts_.length; index++) {
+            address nft = nfts_[index];
+            require(nft != address(0) && nft.isContract(), "invail nft address.");
+            TransferLib.nftTransferFrom(nft, _msgSender(), address(this), tokenId_);
+        }
 
         //2. creat ntoken
         // string memory ntokenName = name_.toSlice().concat("_".toSlice())
@@ -129,7 +137,7 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         //3. add nft to nftInfo
         nftInfo[_nextTnftId] = NftInfo({
             owner: _msgSender(),
-            nftAddress: nft_,
+            nftAddress: nfts_,
             tokenId: tokenId_,
             name: name_,
             description: description_,
@@ -176,7 +184,9 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         require(nft.redeemAmount <= nft.supply, "NftVault#redeem: redeem over.");
 
         //5. redeem nft(tranfer nft to sender)
-        TransferLib.nftTransferFrom(nft.nftAddress, address(this), _msgSender(), nft.tokenId);
+        for (uint256 index = 0; index < nft.nftAddress.length; index++) {
+            TransferLib.nftTransferFrom(nft.nftAddress[index], address(this), _msgSender(), nft.tokenId);   
+        }
 
         emit Redeem(_msgSender(), pid, ntokenAmount_, tokenAmount);
     }
