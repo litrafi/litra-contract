@@ -224,7 +224,6 @@ describe("Tokenize", () => {
         const SELL_AMOUNT = BigNumber.from(E18).mul(2);
         const PRICE = BigNumber.from(E18);
         await tnft.approve(orderBookContract.address, SELL_AMOUNT);
-        console.log(tnft.address);
         await orderBookContract.placeOrder(
             tnft.address,
             SELL_AMOUNT,

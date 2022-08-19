@@ -35,7 +35,9 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
     }
 
     //strage the deposited nft
-    NftInfo[] public nftInfo;
+    mapping(uint256 => NftInfo) public nftInfo;
+
+    uint256 private _nextTnftId;
 
     //get NftInfo from ntoken address 
     mapping(address => uint256) public pidFromNtoken;
@@ -62,31 +64,11 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
     ) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
-        _initializeNftInfo();
 
         ntokenFactory = factory_;
         ntokenPricer = ntokenPricer_;
         config = config_;
-    }
-
-    function _initializeNftInfo() internal {
-        // Once get pid of noexist ntoken, will get 0
-        // So the first NftInfo must be invalid
-        nftInfo.push(
-            NftInfo({
-                owner: address(0),
-                nftAddress: address(0),
-                tokenId: 0,
-                name: "",
-                description: "",
-                ntokenAddress: address(0),
-                supply: 0,
-                redeemRatio: 0,
-                redeemAmount: 0,
-                redeemPrice: 0,
-                status: NftStatus.TRADING
-            })
-        );
+        _nextTnftId = 1;
     }
 
     function isTnftActive(address _tnft) external view returns(bool) {
@@ -95,9 +77,9 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
     }
 
     function getUserCollection(address user) external view returns(uint256 totalValuation, uint256[] memory tnftIds) {
-        bool[] memory owned = new bool[](nftInfo.length);
+        bool[] memory owned = new bool[](_nextTnftId);
         uint256 totalOwned = 0;
-        for (uint256 index = 1; index < nftInfo.length; index++) {
+        for (uint256 index = 1; index < _nextTnftId; index++) {
             address tnft = nftInfo[index].ntokenAddress;
             uint256 balance = Ntoken(tnft).balanceOf(user);
             if(balance > 0) {
@@ -110,7 +92,7 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         
         tnftIds = new uint256[](totalOwned);
         uint256 cursor = 0;
-        for (uint256 index = 1; index < nftInfo.length; index++) {
+        for (uint256 index = 1; index < _nextTnftId; index++) {
             if(owned[index] == true) {
                 tnftIds[cursor] = index;
                 cursor ++;
@@ -119,7 +101,7 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
     }
 
     function nftInfoLength() external view returns (uint256) {
-        return nftInfo.length;
+        return _nextTnftId;
     }
 
     function deposit(
@@ -145,22 +127,21 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         address ntoken = ntokenFactory.createNtoken(ntokenName_, ntokenName_, supply_, _msgSender());
 
         //3. add nft to nftInfo
-        nftInfo.push(
-            NftInfo({
-                owner: _msgSender(),
-                nftAddress: nft_,
-                tokenId: tokenId_,
-                name: name_,
-                description: description_,
-                ntokenAddress: ntoken,
-                supply: supply_,
-                redeemRatio: redeemRatio_,
-                redeemAmount: 0,
-                redeemPrice: 0,
-                status: NftStatus.TRADING
-            })
-        );
-        pidFromNtoken[ntoken] = nftInfo.length - 1;
+        nftInfo[_nextTnftId] = NftInfo({
+            owner: _msgSender(),
+            nftAddress: nft_,
+            tokenId: tokenId_,
+            name: name_,
+            description: description_,
+            ntokenAddress: ntoken,
+            supply: supply_,
+            redeemRatio: redeemRatio_,
+            redeemAmount: 0,
+            redeemPrice: 0,
+            status: NftStatus.TRADING
+        });
+        pidFromNtoken[ntoken] = _nextTnftId;
+        _nextTnftId ++;
 
         ntokenListFromUser[_msgSender()].push(ntoken);
         emit Deposit(_msgSender(), pidFromNtoken[ntoken]);
