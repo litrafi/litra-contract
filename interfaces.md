@@ -118,6 +118,23 @@ enum NftStatus{
 - fee: 默认传3000
 - pool: 流动池地址
 
+### UniswapV3Pool
+
+#### 获取当前流动池基本信息
+- 函数定义: function slot0() returns(Slot0)
+- Slot0 {
+    // 当前价格的开方（Q96）表达格式
+    uint160 sqrtPriceX96;
+    // 当前TICK
+    int24 tick;
+    uint16 observationIndex;
+    uint16 observationCardinality;
+    uint16 observationCardinalityNext;
+    uint8 feeProtocol;
+    bool unlocked;
+}
+
+
 ### Qouter
 
 #### 查询兑换价格

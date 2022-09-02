@@ -184,4 +184,12 @@ contract SwapRouter is
         // has to be reset even though we don't use it in the single hop case
         amountInCached = DEFAULT_AMOUNT_IN_CACHED;
     }
+
+    function exactInput(ExactInputParams calldata params) external override payable returns (uint256 amountOut) {
+
+    }
+
+    function exactOutput(ExactOutputParams calldata params) external override payable returns (uint256 amountIn) {
+
+    }
 }
