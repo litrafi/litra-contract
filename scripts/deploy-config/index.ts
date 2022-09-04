@@ -4,13 +4,15 @@ import { isTestEnv } from "../network-config";
 import { DEPLOY_CONFIG_RINKEBY } from "./rinkeby.config";
 import { DEPLOY_CONFIG_ROPSTEN } from "./ropsten.config";
 import { DEPLOY_CONFIG_BNBTEST } from "./bnbTestnet.config";
+import { DEPLOY_CONFIG_GOERLI } from "./goerli.config";
 
 const configs: {
     [key in string]: DeployConfig
 } = {
     rinkeby: DEPLOY_CONFIG_RINKEBY,
     ropsten: DEPLOY_CONFIG_ROPSTEN,
-    bnbTestnet: DEPLOY_CONFIG_BNBTEST
+    bnbTestnet: DEPLOY_CONFIG_BNBTEST,
+    goerli: DEPLOY_CONFIG_GOERLI
 }
 
 export function getDeployConfig(): DeployConfig {

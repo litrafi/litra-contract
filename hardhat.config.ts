@@ -13,7 +13,7 @@ dotenv.config();
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
-
+const accounts = process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [];
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
@@ -56,23 +56,23 @@ const config: HardhatUserConfig = {
   networks: {
     mainnet: {
       url: "https://mainnet.infura.io/v3/e15030b2cb93458ea41651c02afee982",
-      accounts: 
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      accounts
     },
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/e15030b2cb93458ea41651c02afee982",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      accounts
     },
     ropsten: {
       url: "https://ropsten.infura.io/v3/e15030b2cb93458ea41651c02afee982",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      accounts
+    },
+    goerli: {
+      url: "https://goerli.infura.io/v3/e15030b2cb93458ea41651c02afee982",
+      accounts
     },
     bnbTestnet: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      accounts
     }
   },
   // gasReporter: {
