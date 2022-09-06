@@ -83,6 +83,7 @@ const config: HardhatUserConfig = {
     apiKey: {
       rinkeby: process.env.ETHERSCAN_API_KEY,
       ropsten: process.env.ETHERSCAN_API_KEY,
+      goerli: process.env.ETHERSCAN_API_KEY,
     }
   },
 };
