@@ -28,7 +28,7 @@ export async function deployMockNtoken(vault: NftVault & Contract) {
     const SUPPLY = BigNumber.from(E18).mul(2);
     const index = await vault.nftInfoLength();
     await nft.approve(vault.address, 0);
-    await vault.deposit([nft.address], 0, 'Mock TNFT', '', 'MTNFT', SUPPLY, SUPPLY);
+    await vault.deposit([nft.address], [0], 'Mock TNFT', '', 'MTNFT', SUPPLY, SUPPLY);
     const nftInfo = await vault.nftInfo(index);
     return getContractAt<Ntoken>('Ntoken', nftInfo.ntokenAddress);
 }

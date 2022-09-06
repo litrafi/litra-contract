@@ -70,7 +70,7 @@ describe("Tokenize", () => {
         await nftContract1.approve(nftVaultContract.address, 0);
         await nftVaultContract.deposit(
             [nftContract0.address, nftContract1.address],
-            TOKEN_ID,
+            [TOKEN_ID, TOKEN_ID],
             TOKEN_NAME,
             DESCRIPTION,
             TNFT_NAME,
@@ -81,10 +81,10 @@ describe("Tokenize", () => {
         const nftLength = await nftVaultContract.nftInfoLength();
         const index = nftLength.toNumber() - 1;
         const nftInfo = await nftVaultContract.nftInfo(index);
-        const nftAddress = await nftVaultContract.nftAddress(index);
+        const { nftAddress, tokenId } = await nftVaultContract.nfts(index);
         expect(nftInfo.owner).eq(creator.address);
         expect(nftAddress).deep.eq([nftContract0.address, nftContract1.address]);
-        expect(nftInfo.tokenId.toNumber()).eq(0);
+        expect(tokenId).deep.eq([BigNumber.from(0), BigNumber.from(0)]);
         expect(nftInfo.name).eq(TOKEN_NAME);
         expect(nftInfo.description).eq(DESCRIPTION);
         expect(nftInfo.supply.toString()).eq(SUPPLY.toString());
@@ -114,7 +114,7 @@ describe("Tokenize", () => {
         await nftContract1.approve(nftVaultContract.address, 0);
         await nftVaultContract.deposit(
             [nftContract0.address, nftContract1.address],
-            TOKEN_ID,
+            [TOKEN_ID, TOKEN_ID],
             TOKEN_NAME,
             DESCRIPTION,
             TNFT_NAME,
@@ -219,7 +219,7 @@ describe("Tokenize", () => {
         await nftContract1.approve(nftVaultContract.address, 0);
         await nftVaultContract.deposit(
             [nftContract0.address, nftContract1.address],
-            TOKEN_ID,
+            [TOKEN_ID, TOKEN_ID],
             TOKEN_NAME,
             DESCRIPTION,
             TNFT_NAME,
@@ -260,7 +260,7 @@ describe("Tokenize", () => {
         await erc1155Nft.setApprovalForAll(nftVaultContract.address, true);
         await nftVaultContract.deposit(
             [erc1155Nft.address],
-            TOKEN_ID,
+            [TOKEN_ID],
             TOKEN_NAME,
             DESCRIPTION,
             TNFT_NAME,

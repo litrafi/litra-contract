@@ -23,7 +23,7 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
     struct NftInfo {
         address owner;
         address[] nftAddress;
-        uint256 tokenId;
+        uint256[] tokenId;
         string name;
         string description;
         address ntokenAddress;
@@ -104,13 +104,13 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         return _nextTnftId;
     }
 
-    function nftAddress(uint256 tnftId) external view returns(address[] memory) {
-        return nftInfo[tnftId].nftAddress;
+    function nfts(uint256 tnftId) external view returns(address[] memory nftAddress, uint256[] memory tokenId) {
+        return (nftInfo[tnftId].nftAddress, nftInfo[tnftId].tokenId);
     }
 
     function deposit(
         address[] calldata nfts_,
-        uint256 tokenId_,
+        uint256[] calldata tokenId_,
         string memory name_,
         string memory description_,
         string memory ntokenName_,
@@ -121,11 +121,12 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         require(nfts_.length > 0, "empty nft array");
         require(supply_ > 0, "ntoken supply is zero.");
         require(redeemRatio_ > supply_.mul(50).div(100) && redeemRatio_ <= supply_, "erro redeem amount.");
+        require(nfts_.length == tokenId_.length, "Invalid nfts");
         //1. tansfer nft to vault
         for (uint256 index = 0; index < nfts_.length; index++) {
             address nft = nfts_[index];
             require(nft != address(0) && nft.isContract(), "invail nft address.");
-            TransferLib.nftTransferFrom(nft, _msgSender(), address(this), tokenId_);
+            TransferLib.nftTransferFrom(nft, _msgSender(), address(this), tokenId_[index]);
         }
 
         //2. creat ntoken
@@ -185,7 +186,7 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
 
         //5. redeem nft(tranfer nft to sender)
         for (uint256 index = 0; index < nft.nftAddress.length; index++) {
-            TransferLib.nftTransferFrom(nft.nftAddress[index], address(this), _msgSender(), nft.tokenId);   
+            TransferLib.nftTransferFrom(nft.nftAddress[index], address(this), _msgSender(), nft.tokenId[index]);   
         }
 
         emit Redeem(_msgSender(), pid, ntokenAmount_, tokenAmount);
