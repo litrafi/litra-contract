@@ -181,7 +181,11 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         //4. record redeem price/amount and change status
         nft.redeemAmount = ntokenAmount_;
         nft.redeemPrice = ntokenPrice;
-        nft.status = NftStatus.REDEEMED;
+        if(ntokenAmount_ == nft.supply) {
+            nft.status = NftStatus.END;
+        } else {
+            nft.status = NftStatus.REDEEMED;
+        }
         require(nft.redeemAmount <= nft.supply, "NftVault#redeem: redeem over.");
 
         //5. redeem nft(tranfer nft to sender)
