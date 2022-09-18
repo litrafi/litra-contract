@@ -8,6 +8,7 @@ import "../utils/NftReceiver.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver {
     using SafeMath for uint256;
@@ -209,7 +210,7 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         require(nft.status == NftStatus.REDEEMED, "NftVault#redeem: nft is trading.");
         
         //1. transfer ntoken to vault
-        require(ntokenAmount_ <= IERC20(ntoken_).balanceOf(_msgSender()), "NftVault#collectNtokens: the balance is not enough.");
+        ntokenAmount_ = MathUpgradeable.min(ntokenAmount_, IERC20(ntoken_).balanceOf(_msgSender()));
         IERC20Upgradeable(ntoken_).safeTransferFrom(_msgSender(), address(this), ntokenAmount_);
 
         //2. transfer pricing token to sender
@@ -219,7 +220,8 @@ contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver
         //3. record redeem amount
         nft.redeemAmount = nft.redeemAmount + ntokenAmount_;
         require(nft.redeemAmount <= nft.supply, "NftVault#collectNtokens: redeem over.");
-        if(nft.redeemAmount == nft.supply) {
+        uint256 FUZZINESS = 100;
+        if(nft.redeemAmount >= nft.supply.sub(FUZZINESS)) {
             nft.status = NftStatus.END;
         }
 
