@@ -70,8 +70,8 @@ contract NtokenPricer is OwnableUpgradeable {
         }
         // Get price by reserves
         (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-        // tnft is token1
-        if(_tnft > _pricingToken) {
+        // tnft is token0
+        if(_tnft < _pricingToken) {
             uint256 price = uint256(sqrtPriceX96).mul(sqrtPriceX96);
             return price < MAX_INT.div(TNFT_DECIMALS_MULTIPLIER)
                 ? price.mul(TNFT_DECIMALS_MULTIPLIER).div(Q_MULTIPLIER)
