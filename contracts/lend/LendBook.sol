@@ -155,18 +155,18 @@ contract LendBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit Payback(lendId, _lend.borrower);
     }
 
-    // function forcePayLend(uint256 lendId) external payable nonReentrant {
-    //     require(lendId < lends.length, "Invalid lendId");
-    //     Lend storage _lend = lends[lendId];
+    function forcePayLend(uint256 lendId) external payable nonReentrant {
+        require(lendId < lends.length, "Invalid lendId");
+        Lend storage _lend = lends[lendId];
 
-    //     require(msg.sender == _lend.lender, "Forbidden");
-    //     require(isOverdue(_lend), "Forbidden now");
+        require(msg.sender == _lend.lender, "Forbidden");
+        require(isOverdue(_lend), "Forbidden now");
 
-    //     _lend.status = LendStatus.CLOSED;
-    //     totalTnfts = totalTnfts.sub(_lend.pledgedAmount);
+        _lend.status = LendStatus.CLOSED;
+        totalTnfts = totalTnfts.sub(_lend.pledgedAmount);
 
-    //     Ntoken(_lend.tnft).transfer(_lend.lender, _lend.pledgedAmount);
-    // }
+        Ntoken(_lend.tnft).transfer(_lend.lender, _lend.pledgedAmount);
+    }
 
     function getLendPeriodSeconds(LendPeriod _period) internal pure returns(uint256) {
         if(_period == LendPeriod.ONE_WEEK) {

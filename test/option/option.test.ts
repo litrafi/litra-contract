@@ -11,6 +11,7 @@ import { Ntoken, OptionBook } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployMockNtoken, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear, fastForward } from "../mock-util/env.util";
+import { shouldThrow } from "../mock-util/expect-plus.util";
 
 enum OptionExpiration {
     ONE_WEEK,
@@ -217,5 +218,32 @@ describe('Option', () => {
             PREMIUM_AMOUNT,
             EXPIRATION
         )
+    })
+
+    it('Seller cancle overdue option', async () => {
+        const STRIKE_AMOUNT = BigNumber.from(E18).mul(2);
+        const STRIKE_PRICE = 2;
+        const PREMIUM_AMOUNT = BigNumber.from(E18);
+        const EXPIRATION = OptionExpiration.ONE_WEEK;
+        // create option
+        await tnftContract.approve(optionBookContract.address, STRIKE_AMOUNT);
+        const multiplier = await optionBookContract.STRIKE_PRICE_MULTIPLIER();
+        await optionBookContract.createOption(
+            tnftContract.address,
+            ZERO,
+            STRIKE_AMOUNT,
+            multiplier.mul(STRIKE_PRICE),
+            PREMIUM_AMOUNT,
+            EXPIRATION
+        )
+        // purchase option
+        await optionBookContract
+            .connect(buyer)
+            .purchaseOption(0, { value: PREMIUM_AMOUNT });
+        // Option is overdue but not executed
+        await fastForward(7 * 24 * 3600)
+        await shouldThrow(optionBookContract.sellerCancelOption(0), 'Invalid option')
+        await fastForward(3 * 24 * 3600)
+        await optionBookContract.sellerCancelOption(0);
     })
 })

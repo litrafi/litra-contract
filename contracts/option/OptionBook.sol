@@ -49,12 +49,15 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     Option[] public options;
     PublicConfig public config;
     uint256 constant public STRIKE_PRICE_MULTIPLIER = 1e18;
+    uint256 public executionTime; 
 
     function initialize(PublicConfig _config) public initializer {
         __Ownable_init();
         __ReentrancyGuard_init();
 
         config = _config;
+        // 3 days
+        executionTime = 259200;
     }
 
     // ======== Public View ======== //
@@ -139,7 +142,10 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(optionId < options.length, "Invalid optionId");
         Option storage option = options[optionId];
 
-        require(option.status == OptionStatus.UNFILLED, "Invalid option");
+        require(
+            option.status == OptionStatus.UNFILLED
+            || (option.status == OptionStatus.PURCHASED && isExecutionTimeExpired(option))
+        , "Invalid option");
         require(msg.sender == option.creator, "Forbidden");
 
         option.status = OptionStatus.CLOSED;
@@ -167,5 +173,9 @@ contract OptionBook is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         } else {
             require(false, "Invalid expiration");
         }
+    }
+
+    function isExecutionTimeExpired(Option memory option) private view returns(bool) {
+        return block.timestamp >= option.createdTime.add(getExpirationSeconds(option.expiration)).add(executionTime);
     }
 }

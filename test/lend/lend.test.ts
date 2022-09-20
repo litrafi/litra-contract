@@ -21,6 +21,13 @@ enum LendPeriod {
     HALF_YEAR
 }
 
+enum LendStatus {
+    ACTIVE,
+    BORROWED,
+    OVERDUE,
+    CLOSED
+}
+
 describe('Lend', () => {
     let borrower: SignerWithAddress;
     let lender: SignerWithAddress;
@@ -234,6 +241,16 @@ describe('Lend', () => {
             .connect(lender)
             .lend(0, { value: BORROW_AMOUNT.sub(INTEREST_AMOUNT) });
         await fastForward(LEND_PERIOD_SECONDS);
+        // force payback
+        const comparator = new BalanceComparator(lender.address);
+        await comparator.setBeforeBalance(tnftContract.address);
+        await lendBookContract
+            .connect(lender)
+            .forcePayLend(0)
+        await comparator.setAfterBalance(tnftContract.address);
+        expect(comparator.compare(tnftContract.address)).deep.eq(PLEDGED_AMOUNT);
+        const lend = await lendBookContract.lends(0);
+        expect(lend.status).eq(LendStatus.CLOSED)
     })
 
     it('Personal', async () => {
