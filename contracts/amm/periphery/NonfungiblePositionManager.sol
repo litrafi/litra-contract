@@ -23,6 +23,7 @@ import '@uniswap/v3-periphery/contracts/base/PoolInitializer.sol';
 /// @notice Wraps Uniswap V3 positions in the ERC721 non-fungible token interface
 contract NonfungiblePositionManager is
     INonfungiblePositionManager,
+    Multicall,
     PeripheryImmutableState,
     PoolInitializer,
     LiquidityManagement,
