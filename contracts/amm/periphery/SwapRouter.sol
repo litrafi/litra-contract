@@ -5,7 +5,6 @@ pragma abicoder v2;
 import '@uniswap/v3-core/contracts/libraries/SafeCast.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/base/PeripheryImmutableState.sol';
@@ -46,8 +45,7 @@ contract SwapRouter is
         address tokenB,
         uint24 fee
     ) private view returns (IUniswapV3Pool) {
-        // return IUniswapV3Pool(PoolAddress.computeAddress(factory, PoolAddress.getPoolKey(tokenA, tokenB, fee)));
-        return IUniswapV3Pool(IUniswapV3Factory(factory).getPool(tokenA, tokenB, fee));
+        return IUniswapV3Pool(PoolAddress.computeAddress(factory, PoolAddress.getPoolKey(tokenA, tokenB, fee)));
     }
 
     struct SwapCallbackData {
@@ -64,7 +62,7 @@ contract SwapRouter is
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         (address tokenIn, address tokenOut, uint24 fee) = data.path.decodeFirstPool();
-        require(IUniswapV3Factory(factory).getPool(tokenIn, tokenOut, fee) == msg.sender);
+        CallbackValidation.verifyCallback(factory, tokenIn, tokenOut, fee);
 
         (bool isExactInput, uint256 amountToPay) =
             amount0Delta > 0
@@ -130,6 +128,43 @@ contract SwapRouter is
         require(amountOut >= params.amountOutMinimum, 'Too little received');
     }
 
+    /// @inheritdoc ISwapRouter
+    function exactInput(ExactInputParams memory params)
+        external
+        payable
+        override
+        checkDeadline(params.deadline)
+        returns (uint256 amountOut)
+    {
+        address payer = msg.sender; // msg.sender pays for the first hop
+
+        while (true) {
+            bool hasMultiplePools = params.path.hasMultiplePools();
+
+            // the outputs of prior swaps become the inputs to subsequent ones
+            params.amountIn = exactInputInternal(
+                params.amountIn,
+                hasMultiplePools ? address(this) : params.recipient, // for intermediate swaps, this contract custodies
+                0,
+                SwapCallbackData({
+                    path: params.path.getFirstPool(), // only the first pool in the path is necessary
+                    payer: payer
+                })
+            );
+
+            // decide whether to continue or terminate
+            if (hasMultiplePools) {
+                payer = address(this); // at this point, the caller has paid
+                params.path = params.path.skipToken();
+            } else {
+                amountOut = params.amountIn;
+                break;
+            }
+        }
+
+        require(amountOut >= params.amountOutMinimum, 'Too little received');
+    }
+
     /// @dev Performs a single exact output swap
     function exactOutputInternal(
         uint256 amountOut,
@@ -185,11 +220,25 @@ contract SwapRouter is
         amountInCached = DEFAULT_AMOUNT_IN_CACHED;
     }
 
-    function exactInput(ExactInputParams calldata params) external override payable returns (uint256 amountOut) {
+    /// @inheritdoc ISwapRouter
+    function exactOutput(ExactOutputParams calldata params)
+        external
+        payable
+        override
+        checkDeadline(params.deadline)
+        returns (uint256 amountIn)
+    {
+        // it's okay that the payer is fixed to msg.sender here, as they're only paying for the "final" exact output
+        // swap, which happens first, and subsequent swaps are paid for within nested callback frames
+        exactOutputInternal(
+            params.amountOut,
+            params.recipient,
+            0,
+            SwapCallbackData({path: params.path, payer: msg.sender})
+        );
 
-    }
-
-    function exactOutput(ExactOutputParams calldata params) external override payable returns (uint256 amountIn) {
-
+        amountIn = amountInCached;
+        require(amountIn <= params.amountInMaximum, 'Too much requested');
+        amountInCached = DEFAULT_AMOUNT_IN_CACHED;
     }
 }

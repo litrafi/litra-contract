@@ -1,7 +1,6 @@
 import { getDeployConfig } from "../deploy-config";
 import { UniswapV3FactoryDeployer } from "../deployer/amm/factory.deployer";
 import { PositionManagerDeployer } from "../deployer/amm/position-manager.deployer";
-import { QuoterDeployer } from "../deployer/amm/quoter.deployer";
 import { SwapRouterDeployer } from "../deployer/amm/router.deployer";
 import { NtokenPricerDeployer } from "../deployer/ntoken-pricer.deployer";
 import { OrderBookDeployer } from "../deployer/order/order-book.deployer";
@@ -68,7 +67,6 @@ export class TokenizeSynchroniser extends Synchroniser<SynchroniserConfig> {
         const ammFactory = await new UniswapV3FactoryDeployer().getOrDeployInstance({});
         await new SwapRouterDeployer().getOrDeployInstance({ factory: ammFactory.address, weth });
         await new PositionManagerDeployer().getOrDeployInstance({ factory: ammFactory.address, weth });
-        await new QuoterDeployer().getOrDeployInstance({ factory: ammFactory.address, weth: weth })
         const orderBook = await new OrderBookDeployer().getOrDeployInstance({ config: publicConfig.address });
         const ntokenPricer = await new NtokenPricerDeployer().getOrDeployInstance({
             factory: ammFactory.address,

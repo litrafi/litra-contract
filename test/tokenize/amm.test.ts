@@ -4,13 +4,12 @@ import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import { UniswapV3FactoryDeployer } from "../../scripts/deployer/amm/factory.deployer";
 import { PositionManagerDeployer } from "../../scripts/deployer/amm/position-manager.deployer";
-import { QuoterDeployer } from "../../scripts/deployer/amm/quoter.deployer";
 import { SwapRouterDeployer } from "../../scripts/deployer/amm/router.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
 import { getContractAt } from "../../scripts/lib/utils";
 import { getNetworkConfig } from "../../scripts/network-config";
 import { TokenizeSynchroniser } from "../../scripts/synchroniser/tokenize.synchroniser";
-import { NonfungiblePositionManager, Quoter, SwapRouter, UniswapV3Factory, UniswapV3Pool, WBNB } from "../../typechain";
+import { NonfungiblePositionManager, SwapRouter, UniswapV3Factory, UniswapV3Pool, WBNB } from "../../typechain";
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { deployERC20Token, mockEnvForTokenizeModule } from "../mock-util/deploy.util";
 import { clear } from "../mock-util/env.util";
@@ -22,7 +21,6 @@ describe('Amm', () => {
     let factoryContract: UniswapV3Factory & Contract;
     let routerContract: SwapRouter & Contract;
     let positionManager: NonfungiblePositionManager & Contract;
-    let quoter: Quoter & Contract;
 
     let weth: WBNB & Contract;
 
@@ -42,7 +40,6 @@ describe('Amm', () => {
         factoryContract = await new UniswapV3FactoryDeployer().getInstance();
         routerContract = await new SwapRouterDeployer().getInstance();
         positionManager = await new PositionManagerDeployer().getInstance();
-        quoter = await new QuoterDeployer().getInstance();
     })
 
     it('Add liquidity', async () => {
@@ -84,12 +81,9 @@ describe('Amm', () => {
         // get position
         const positionBalance = await positionManager.balanceOf(user.address);
         expect(positionBalance.toNumber()).eq(1);
-        let positionId = await positionManager.positionOfOwnerByIndex(user.address, 0);
-        expect(positionId).eq(1);
+        const positionId = await positionManager.tokenByIndex(0);
+        expect(positionId).deep.eq(BigNumber.from(1));
         let position = await positionManager.positions(positionId);
-        expect(position.operator).eq(user.address);
-        positionId = await positionManager.positionOfSpecifiedPool(user.address, tnft.address, weth.address, FEE_RATIO);
-        expect(positionId).eq(1);
         // increase liquidity
         await tnft.mint(user.address, DEPOSIT_AMOUNT);
         await tnft.approve(positionManager.address, DEPOSIT_AMOUNT);
@@ -153,17 +147,6 @@ describe('Amm', () => {
         }, { value: DEPOSIT_AMOUNT })
         // Swap
         const SWAP_AMOUNT = BigNumber.from(E18);
-        // estimate
-        const { amountOut } = await quoter.callStatic.quoteExactInputSingle(
-            {
-                tokenIn: tnft.address,
-                tokenOut: weth.address,
-                fee: FEE_RATIO,
-                amountIn: SWAP_AMOUNT,
-                sqrtPriceLimitX96: 0
-            }
-        );
-        expectCloseTo(amountOut, SWAP_AMOUNT, 2);
         // swap
         await tnft.mint(user.address, SWAP_AMOUNT);
         await tnft.approve(routerContract.address, SWAP_AMOUNT);
@@ -190,6 +173,5 @@ describe('Amm', () => {
         await comparator.setAfterBalance(ZERO);
         expect(comparator.compare(tnft.address).eq(SWAP_AMOUNT))
         expectCloseTo(comparator.compare(ZERO), SWAP_AMOUNT, 2);
-        expectCloseTo(comparator.compare(ZERO), amountOut, 2);
     })
 })

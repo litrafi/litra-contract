@@ -79,7 +79,9 @@ describe('Dashboard', () => {
             PRICE,
         );
         // check circulating supply
+        console.log('archo 0', tnft.address)
         const circulation = await dashboardContract.getTnftCirculation(tnft.address);
+        console.log('archo 1')
         expect(circulation).eq(SELL_AMOUNT.add(TNFT_AMOUNT));
     })
 })

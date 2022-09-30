@@ -2,19 +2,18 @@
 pragma solidity =0.7.6;
 pragma abicoder v2;
 
-import 'hardhat/console.sol';
-import './INonfungiblePositionManager.sol';
-import './LiquidityManagement.sol';
-
-import '@openzeppelin/3.4.2/utils/EnumerableSet.sol';
-
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint128.sol';
 import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
+
+import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/INonfungibleTokenPositionDescriptor.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
+import '@uniswap/v3-periphery/contracts/base/LiquidityManagement.sol';
 import '@uniswap/v3-periphery/contracts/base/PeripheryImmutableState.sol';
 import '@uniswap/v3-periphery/contracts/base/Multicall.sol';
+import '@uniswap/v3-periphery/contracts/base/ERC721Permit.sol';
 import '@uniswap/v3-periphery/contracts/base/PeripheryValidation.sol';
 import '@uniswap/v3-periphery/contracts/base/SelfPermit.sol';
 import '@uniswap/v3-periphery/contracts/base/PoolInitializer.sol';
@@ -24,14 +23,13 @@ import '@uniswap/v3-periphery/contracts/base/PoolInitializer.sol';
 contract NonfungiblePositionManager is
     INonfungiblePositionManager,
     Multicall,
+    ERC721Permit,
     PeripheryImmutableState,
     PoolInitializer,
     LiquidityManagement,
     PeripheryValidation,
     SelfPermit
 {
-    using EnumerableSet for EnumerableSet.UintSet;
-
     // details about the uniswap position
     struct Position {
         // the nonce for permits
@@ -61,7 +59,6 @@ contract NonfungiblePositionManager is
 
     /// @dev The token ID position data
     mapping(uint256 => Position) private _positions;
-    mapping(address => EnumerableSet.UintSet) private _holderPositions;
 
     /// @dev The ID of the next token that will be minted. Skips 0
     uint176 private _nextId = 1;
@@ -71,7 +68,7 @@ contract NonfungiblePositionManager is
     constructor(
         address _factory,
         address _WETH9
-    ) PeripheryImmutableState(_factory, _WETH9) {}
+    ) ERC721Permit('Uniswap V3 Positions NFT-V1', 'UNI-V3-POS', '1') PeripheryImmutableState(_factory, _WETH9) {}
 
     /// @inheritdoc INonfungiblePositionManager
     function positions(uint256 tokenId)
@@ -123,7 +120,7 @@ contract NonfungiblePositionManager is
 
     /// @inheritdoc INonfungiblePositionManager
     function mint(MintParams calldata params)
-        public
+        external
         payable
         override
         checkDeadline(params.deadline)
@@ -150,7 +147,7 @@ contract NonfungiblePositionManager is
             })
         );
 
-        tokenId = _mint(params.recipient);
+        _mint(params.recipient, (tokenId = _nextId++));
 
         bytes32 positionKey = PositionKey.compute(address(this), params.tickLower, params.tickUpper);
         (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, , ) = pool.positions(positionKey);
@@ -161,9 +158,10 @@ contract NonfungiblePositionManager is
                 address(pool),
                 PoolAddress.PoolKey({token0: params.token0, token1: params.token1, fee: params.fee})
             );
+
         _positions[tokenId] = Position({
             nonce: 0,
-            operator: msg.sender,
+            operator: address(0),
             poolId: poolId,
             tickLower: params.tickLower,
             tickUpper: params.tickUpper,
@@ -178,13 +176,18 @@ contract NonfungiblePositionManager is
     }
 
     modifier isAuthorizedForToken(uint256 tokenId) {
-        require(_positions[tokenId].operator == msg.sender, 'Not approved');
+        require(_isApprovedOrOwner(msg.sender, tokenId), 'Not approved');
         _;
     }
 
+    function tokenURI(uint256 tokenId) public view override(ERC721, IERC721Metadata) returns (string memory) {}
+
+    // save bytecode by removing implementation of unused method
+    function baseURI() public pure override returns (string memory) {}
+
     /// @inheritdoc INonfungiblePositionManager
     function increaseLiquidity(IncreaseLiquidityParams calldata params)
-        public
+        external
         payable
         override
         checkDeadline(params.deadline)
@@ -257,7 +260,7 @@ contract NonfungiblePositionManager is
         require(positionLiquidity >= params.liquidity);
 
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
-        IUniswapV3Pool pool = IUniswapV3Pool(IUniswapV3Factory(factory).getPool(poolKey.token0, poolKey.token1, poolKey.fee));
+        IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, poolKey));
         (amount0, amount1) = pool.burn(position.tickLower, position.tickUpper, params.liquidity);
 
         require(amount0 >= params.amount0Min && amount1 >= params.amount1Min, 'Price slippage check');
@@ -309,7 +312,7 @@ contract NonfungiblePositionManager is
 
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
 
-        IUniswapV3Pool pool = IUniswapV3Pool(IUniswapV3Factory(factory).getPool(poolKey.token0, poolKey.token1, poolKey.fee));
+        IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, poolKey));
 
         (uint128 tokensOwed0, uint128 tokensOwed1) = (position.tokensOwed0, position.tokensOwed1);
 
@@ -361,46 +364,28 @@ contract NonfungiblePositionManager is
         emit Collect(params.tokenId, recipient, amount0Collect, amount1Collect);
     }
 
-    function balanceOf(address owner) public view returns(uint256) {
-        return _holderPositions[owner].length();
-    }
-
-    function positionOfOwnerByIndex(address owner, uint256 index) external view returns(uint256) {
-        return _holderPositions[owner].at(index);
-    }
-
-    function positionOfSpecifiedPool(address owner, address token0, address token1, uint24 fee) public view returns(uint256) {
-        PoolAddress.PoolKey memory poolKey = PoolAddress.getPoolKey(token0, token1, fee);
-        for (uint256 index = 0; index < balanceOf(owner); index++) {
-            uint256 positionId = _holderPositions[owner].at(index);
-            PoolAddress.PoolKey memory _poolKey = _poolIdToPoolKey[_positions[positionId].poolId];
-            if(
-                _poolKey.token0 == poolKey.token0
-                && _poolKey.token1 == poolKey.token1
-                && _poolKey.fee == poolKey.fee
-            ) {
-                return positionId;
-            }
-        }
-        return 0;
-    }
-
     /// @inheritdoc INonfungiblePositionManager
     function burn(uint256 tokenId) external payable override isAuthorizedForToken(tokenId) {
         Position storage position = _positions[tokenId];
-        console.log(position.liquidity, position.tokensOwed0, position.tokensOwed1);
         require(position.liquidity == 0 && position.tokensOwed0 == 0 && position.tokensOwed1 == 0, 'Not cleared');
         delete _positions[tokenId];
         _burn(tokenId);
     }
 
-    function _mint(address user) private returns(uint176 tokenId) {
-        require(_positions[tokenId].operator == address(0), "Can't mint position");
-        tokenId = _nextId++;
-        _holderPositions[user].add(tokenId);
+    function _getAndIncrementNonce(uint256 tokenId) internal override returns (uint256) {
+        return uint256(_positions[tokenId].nonce++);
     }
 
-    function _burn(uint256 tokenId) private {
-        _holderPositions[_positions[tokenId].operator].remove(tokenId);
+    /// @inheritdoc IERC721
+    function getApproved(uint256 tokenId) public view override(ERC721, IERC721) returns (address) {
+        require(_exists(tokenId), 'ERC721: approved query for nonexistent token');
+
+        return _positions[tokenId].operator;
+    }
+
+    /// @dev Overrides _approve to use the operator in the position, which is packed with the position permit nonce
+    function _approve(address to, uint256 tokenId) internal override(ERC721) {
+        _positions[tokenId].operator = to;
+        emit Approval(ownerOf(tokenId), to, tokenId);
     }
 }

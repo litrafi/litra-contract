@@ -39,13 +39,7 @@ contract Dashboard is OwnableUpgradeable {
             if(pool == address(0)) {
                 continue;
             }
-            uint256 reserve0 = IUniswapPool(pool).balance0();
-            uint256 reserve1 = IUniswapPool(pool).balance1();
-            if(IUniswapPool(pool).token0() == _tnft) {
-                ammSupply = ammSupply.add(reserve0);
-            } else {
-                ammSupply = ammSupply.add(reserve1);
-            }
+            ammSupply = ammSupply.add(IERC20(_tnft).balanceOf(pool));
         }
 
         uint256 ordersSupply = orderBook.tnftCirculation(_tnft);
