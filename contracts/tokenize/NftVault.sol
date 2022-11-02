@@ -1,239 +1,135 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./NtokenFactory.sol";
-import "../NtokenPricer.sol";
+import "./FToken.sol";
 import "../utils/NftReceiver.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract NftVault is OwnableUpgradeable, ReentrancyGuardUpgradeable, NftReceiver {
-    using SafeMath for uint256;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using AddressUpgradeable for address;
+contract NftVault is Ownable, ReentrancyGuard, NftReceiver {
+    event CreateFToken(address indexed nft, uint256 ftId, address ft);
+    event Fungiblize(address indexed creator, uint256 ftId, uint256 nftId);
+    event Redeem(address indexed redeemer, uint256 ftId, uint256 nftId);
 
-    enum NftStatus{
-        TRADING,
-        REDEEMED,
-        END
+    using EnumerableSet for EnumerableSet.UintSet;
+
+    // Record of NFT fungiblized
+    struct FungiblizedNFT {
+        address nftAddr;
+        uint256 tokenId;
+        bool inVault;
     }
 
-    struct NftInfo {
-        address owner;
-        address[] nftAddress;
-        uint256[] tokenId;
-        string name;
-        string description;
-        address ntokenAddress;
-        uint256 supply;
-        uint256 redeemRatio;
-        uint256 redeemAmount;
-        uint256 redeemPrice;
-        NftStatus status;
+    // Fungible Token
+    struct FTInfo {
+        address nftAddr;
+        address ftAddr;
     }
 
-    //strage the deposited nft
-    mapping(uint256 => NftInfo) public nftInfo;
+    mapping(uint256 => FTInfo) public fts;
+    uint256 public nextFtId = 1;
+    // [nftAdd/ftAddr] => ftId
+    mapping(address => uint256) public ftIds;
+    FungiblizedNFT[] public fungiblizedNFTs;
+    mapping(uint256 => EnumerableSet.UintSet) private _ftNfts;
 
-    uint256 private _nextTnftId;
+    constructor() Ownable() ReentrancyGuard()  {}
 
-    //get NftInfo from ntoken address 
-    mapping(address => uint256) public pidFromNtoken;
-
-    //get deposite ntoken array from user address
-    mapping(address => address[]) private ntokenListFromUser;
-
-    //factory for create ntoken
-    NtokenFactory public ntokenFactory;
-
-    // Pricer for getting ntoken price
-    NtokenPricer public ntokenPricer;
-
-    PublicConfig public config;
-
-    event Deposit(address indexed user_, uint256 indexed pid_);
-    event Redeem(address indexed user_, uint256 indexed pid_, uint256 redeemAmount_, uint256 ethAmount_);
-    event CollectNtokens(address indexed user_, uint256 indexed pid_, uint256 redeemAmount_, uint256 ethAmount_);
-
-    function initialize(
-        NtokenFactory factory_,
-        NtokenPricer ntokenPricer_,
-        PublicConfig config_
-    ) public initializer {
-        __Ownable_init();
-        __ReentrancyGuard_init();
-
-        ntokenFactory = factory_;
-        ntokenPricer = ntokenPricer_;
-        config = config_;
-        _nextTnftId = 1;
-    }
-
-    function isTnftActive(address _tnft) external view returns(bool) {
-        NftInfo memory nft = nftInfo[pidFromNtoken[_tnft]];
-        return nft.supply > 0 && nft.status == NftStatus.TRADING;
-    }
-
-    function getUserCollection(address user) external view returns(uint256 totalValuation, uint256[] memory tnftIds) {
-        bool[] memory owned = new bool[](_nextTnftId);
-        uint256 totalOwned = 0;
-        for (uint256 index = 1; index < _nextTnftId; index++) {
-            address tnft = nftInfo[index].ntokenAddress;
-            uint256 balance = Ntoken(tnft).balanceOf(user);
-            if(balance > 0) {
-                (,, uint256 price) = ntokenPricer.getTnftPrice(tnft);
-                totalValuation = totalValuation.add(price.mul(balance).div(1e18));
-                totalOwned ++;
-                owned[index] = true;
-            }
-        }
-        
-        tnftIds = new uint256[](totalOwned);
-        uint256 cursor = 0;
-        for (uint256 index = 1; index < _nextTnftId; index++) {
-            if(owned[index] == true) {
-                tnftIds[cursor] = index;
-                cursor ++;
-            }
-        }
-    }
-
-    function nftInfoLength() external view returns (uint256) {
-        return _nextTnftId;
-    }
-
-    function nfts(uint256 tnftId) external view returns(address[] memory nftAddress, uint256[] memory tokenId) {
-        return (nftInfo[tnftId].nftAddress, nftInfo[tnftId].tokenId);
-    }
-
-    function deposit(
-        address[] calldata nfts_,
-        uint256[] calldata tokenId_,
-        string memory name_,
-        string memory description_,
-        string memory ntokenName_,
-        uint256 supply_,
-        uint256 redeemRatio_
-    ) external {
-        require(!address(_msgSender()).isContract(), "sender is a contract.");
-        require(nfts_.length > 0, "empty nft array");
-        require(supply_ > 0, "ntoken supply is zero.");
-        require(redeemRatio_ > supply_.mul(50).div(100) && redeemRatio_ <= supply_, "erro redeem amount.");
-        require(nfts_.length == tokenId_.length, "Invalid nfts");
-        //1. tansfer nft to vault
-        for (uint256 index = 0; index < nfts_.length; index++) {
-            address nft = nfts_[index];
-            require(nft != address(0) && nft.isContract(), "invail nft address.");
-            TransferLib.nftTransferFrom(nft, _msgSender(), address(this), tokenId_[index]);
-        }
-
-        //2. creat ntoken
-        // string memory ntokenName = name_.toSlice().concat("_".toSlice())
-        //                                 .toSlice().concat(tokenId_.toString().toSlice())
-        //                                 .toSlice().concat("_Ntoken".toSlice());
-        address ntoken = ntokenFactory.createNtoken(ntokenName_, ntokenName_, supply_, _msgSender());
-
-        //3. add nft to nftInfo
-        nftInfo[_nextTnftId] = NftInfo({
-            owner: _msgSender(),
-            nftAddress: nfts_,
-            tokenId: tokenId_,
-            name: name_,
-            description: description_,
-            ntokenAddress: ntoken,
-            supply: supply_,
-            redeemRatio: redeemRatio_,
-            redeemAmount: 0,
-            redeemPrice: 0,
-            status: NftStatus.TRADING
-        });
-        pidFromNtoken[ntoken] = _nextTnftId;
-        _nextTnftId ++;
-
-        ntokenListFromUser[_msgSender()].push(ntoken);
-        emit Deposit(_msgSender(), pidFromNtoken[ntoken]);
-    }
-
-    function redeem(
-        address ntoken_,
-        uint256 ntokenAmount_
-    ) external {
-        require(ntoken_ != address(0) && ntoken_.isContract(), "NftVault#redeem: invail ntoken address.");
-        require(ntokenAmount_ >0, "NftVault#redeem: ntoken amount is zero");
-        uint256 pid = pidFromNtoken[ntoken_];
-        require(pid != 0, "Invalid tnft");
-        NftInfo storage nft = nftInfo[pid];
-        require(nft.status == NftStatus.TRADING, "NftVault#redeem: nft is redeemed.");
-
-        //1. transfer ntoken to vault
-        require(ntokenAmount_ >= nft.redeemRatio, "NftVault#redeem: the amount is not enough.");
-        require(ntokenAmount_ <= IERC20(ntoken_).balanceOf(_msgSender()), "NftVault#redeem: the balance is not enough.");
-        IERC20Upgradeable(ntoken_).safeTransferFrom(_msgSender(), address(this), ntokenAmount_);
-
-        //2. calculate ntoken price
-        (, , uint256 ntokenPrice) = ntokenPricer.getTnftPrice(ntoken_);
-        uint256 tokenAmount = nft.supply.sub(ntokenAmount_).mul(ntokenPrice).div(uint256(1e18));
-        //3. transfer pricing token to vault
-        IERC20(config.usdt()).transferFrom(_msgSender(), address(this), tokenAmount);
-        
-        //4. record redeem price/amount and change status
-        nft.redeemAmount = ntokenAmount_;
-        nft.redeemPrice = ntokenPrice;
-        if(ntokenAmount_ == nft.supply) {
-            nft.status = NftStatus.END;
-        } else {
-            nft.status = NftStatus.REDEEMED;
-        }
-        require(nft.redeemAmount <= nft.supply, "NftVault#redeem: redeem over.");
-
-        //5. redeem nft(tranfer nft to sender)
-        for (uint256 index = 0; index < nft.nftAddress.length; index++) {
-            TransferLib.nftTransferFrom(nft.nftAddress[index], address(this), _msgSender(), nft.tokenId[index]);   
-        }
-
-        emit Redeem(_msgSender(), pid, ntokenAmount_, tokenAmount);
-    }
-    
-
-    function collectNtokens(
-        address ntoken_,
-        uint256 ntokenAmount_
+    function fungiblize (
+        address _nftAddr,
+        uint256 _tokenId
     ) external nonReentrant {
-        require(ntoken_ != address(0) && ntoken_.isContract(), "NftVault#collectNtokens: invail ntoken address.");
-        require(ntokenAmount_ >0, "NftVault#collectNtokens: ntoken amount is zero");
-        uint256 pid = pidFromNtoken[ntoken_];
-        require(pid != 0, "Invalid tnft");
-        NftInfo storage nft = nftInfo[pid];
-        require(nft.status == NftStatus.REDEEMED, "NftVault#redeem: nft is trading.");
-        
-        //1. transfer ntoken to vault
-        ntokenAmount_ = MathUpgradeable.min(ntokenAmount_, IERC20(ntoken_).balanceOf(_msgSender()));
-        IERC20Upgradeable(ntoken_).safeTransferFrom(_msgSender(), address(this), ntokenAmount_);
-
-        //2. transfer pricing token to sender
-        uint256 tokenAmount = ntokenAmount_.mul(nft.redeemPrice).div(1e18);
-        IERC20(config.usdt()).transfer(_msgSender(), tokenAmount);
-
-        //3. record redeem amount
-        nft.redeemAmount = nft.redeemAmount + ntokenAmount_;
-        require(nft.redeemAmount <= nft.supply, "NftVault#collectNtokens: redeem over.");
-        uint256 FUZZINESS = 100;
-        if(nft.redeemAmount >= nft.supply.sub(FUZZINESS)) {
-            nft.status = NftStatus.END;
+        IERC721(_nftAddr).transferFrom(msg.sender, address(this), _tokenId);
+        // Save nft record
+        uint256 recordId = fungiblizedNFTs.length;
+        fungiblizedNFTs.push(FungiblizedNFT(_nftAddr, _tokenId, true));
+        // Get FT Info
+        uint256 ftId = ftIds[_nftAddr];
+        address ft;
+        if(ftId == 0) {
+            // Create a new FT
+            string memory ftName;
+            string memory ftSymbol;
+            (bool succeed, bytes memory result) = _nftAddr.call(abi.encodeWithSignature("name()"));
+            if(succeed) {
+                string memory nftName = abi.decode(result, (string));
+                ftName = string(abi.encodePacked(nftName, " Fungible Token"));
+            } else {
+                ftName = string(abi.encodePacked("Litra FT#", ftId));
+            }
+            (succeed, result) = _nftAddr.call(abi.encodeWithSignature("symbol()"));
+            if(succeed) {
+                string memory nftSymbol = abi.decode(result, (string));
+                ftSymbol = string(abi.encodePacked(nftSymbol, "ft"));
+            } else {
+                ftSymbol = string(abi.encodePacked("LFT#", ftId));
+            }
+            ft = address(new FToken(ftName, ftSymbol));
+            // get ftId
+            uint256 _nextFtId = nextFtId;
+            ftId = _nextFtId;
+            _nextFtId ++;
+            nextFtId = _nextFtId;
+            // storage
+            fts[ftId] = FTInfo(_nftAddr, ft);
+            ftIds[_nftAddr] = ftId;
+            ftIds[ft] = ftId;
+            
+            emit CreateFToken(_nftAddr, ftId, ft);
+        } else {
+            ft = fts[ftId].ftAddr;
         }
+        // bound FT and NFT
+        _ftNfts[ftId].add(recordId);
+        // mint for user
+        FToken(ft).mint(msg.sender, 1e18);
 
-        emit CollectNtokens(_msgSender(), pid, ntokenAmount_, tokenAmount);
+        emit Fungiblize(msg.sender, ftId, recordId);
     }
 
-    function getDepositedNftList(address account) external view returns(uint256[] memory){
-        address[] memory ntokenList = ntokenListFromUser[account];
-        uint256[] memory index = new uint256[](ntokenList.length);
-        for (uint256 i = 0; i < ntokenList.length; i++){
-            index[i] = pidFromNtoken[ntokenList[i]];
+    function nftsLength() external view returns(uint256) {
+        return fungiblizedNFTs.length;
+    }
+
+    function nftsInFt(uint256 _ftId) external view returns(uint256[] memory) {
+        uint256 arrLength = _ftNfts[_ftId].length();
+        uint256[] memory nfts = new uint256[](arrLength);
+        for (uint256 index = 0; index < arrLength; index++) {
+            nfts[index] = _ftNfts[_ftId].at(index);
         }
-        return index;
+        return nfts;
+    }
+
+    /**
+        @notice Redeem nft from vault and burn one FT
+        @param _ftId index of fts
+        @param _nftId Greate than or equal 0 to redeem a designated nft with a more fees
+                        Less than 0 to redeem a recent fungiblized nft with a normal fee
+     */
+    function redeem(uint256 _ftId, int256 _nftId) external {
+        FTInfo memory ftInfo = fts[_ftId];
+        require(ftInfo.nftAddr != address(0), "Invalid FT");
+        require(FToken(ftInfo.ftAddr).balanceOf(msg.sender) >= 1e18, "Insufficient ft");
+        require(_ftNfts[_ftId].length() > 0, "No NFT in vault");
+        require(_nftId < 0 || _ftNfts[_ftId].contains(uint256(_nftId)), "Invalid nftId");
+        // burn ft
+        FToken(ftInfo.ftAddr).burn(msg.sender, 1e18);
+        // return nft
+        uint256 returnedNftId;
+        if(_nftId < 0) {
+            // return the recent fungiblized nft
+            returnedNftId = _ftNfts[_ftId].at(_ftNfts[_ftId].length() - 1);
+        } else {
+            returnedNftId = uint256(_nftId);
+        }
+        FungiblizedNFT memory nftInfo = fungiblizedNFTs[returnedNftId];
+        fungiblizedNFTs[returnedNftId].inVault = false;
+        _ftNfts[_ftId].remove(returnedNftId);
+        IERC721(nftInfo.nftAddr).safeTransferFrom(address(this), msg.sender, nftInfo.tokenId);
+
+        emit Redeem(msg.sender, _ftId, returnedNftId);
     }
 }
