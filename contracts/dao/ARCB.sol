@@ -1,5 +1,6 @@
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ARCB is ERC20 {
@@ -8,12 +9,13 @@ contract ARCB is ERC20 {
     event SetAdmin(address minter);
 
     uint256 constant private YEAR = 86400 * 365;
-    uint256 constant private INITIAL_SUPPLY = 1_303_030_303;
-    // leading to 43% premine
-    uint256 constant private INITIAL_RATE = 274_815_283 * 10 ** 18 / YEAR;
+    // 0.5 Billion
+    uint256 constant private INITIAL_SUPPLY = 5e26;
+    // leading to 50% premine
+    uint256 constant private INITIAL_RATE = 100638977635782747603833865 / YEAR;
     uint256 constant private RATE_REDUCTION_TIME = YEAR;
-    // 2 ** (1/4) * 1e18;
-    uint256 constant private RATE_REDUCTION_COEFFICIENT = 1189207115002721024;
+    // 1.252
+    uint256 constant private RATE_REDUCTION_COEFFICIENT = 1252 * 1e15;
     uint256 constant private RATE_DENOMINATOR = 10 ** 18;
     uint256 constant private INFLATION_DELAY = 86400;
 
@@ -27,10 +29,10 @@ contract ARCB is ERC20 {
     uint256 private startEpochSupply;
 
     constructor() ERC20('ArcheBase Token', 'ARCB') {
-        uint256 initSupply = INITIAL_SUPPLY * 10 ** decimals();
+        uint256 initSupply = INITIAL_SUPPLY;
         _mint(_msgSender(), initSupply);
         admin = _msgSender();
-        startEpochTime = block.timestamp + INFLATION_DELAY - RATE_REDUCTION_COEFFICIENT;
+        startEpochTime = block.timestamp + INFLATION_DELAY - RATE_REDUCTION_TIME;
         miningEpoch = -1;
         rate = 0;
         startEpochSupply = initSupply;
@@ -91,7 +93,7 @@ contract ARCB is ERC20 {
         @notice How much supply is mintable from start timestamp till end timestamp
      */
     function mintableInTimeframe(uint256 start, uint256 end) external view returns(uint256) {
-        require(start <= end, "End gte start");
+        require(start <= end, "start > end");
 
         uint256 toMint = 0;
         uint256 currentEpochTime = startEpochTime;

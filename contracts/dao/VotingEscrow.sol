@@ -47,7 +47,7 @@ contract VotingEscrow is ReentrancyGuard {
 
     uint256 public epoch;
     // epoch -> unsigned point
-    Point[] public pointHistory;
+    mapping(uint256 => Point) public pointHistory;
     // user -> epoch -> unsigned point
     mapping(address => mapping(uint256 => Point)) public userPointHistory;
     mapping(address => uint256) public userPointEpoch;
@@ -88,25 +88,16 @@ contract VotingEscrow is ReentrancyGuard {
     }
 
     constructor(
-        address _token,
-        string memory _name,
-        string memory _symbol,
-        string memory _version
+        address _token
     ) ReentrancyGuard() {
         admin = msg.sender;
         token = _token;
-        pointHistory.push(Point({
-            blk: block.timestamp,
-            ts: block.timestamp,
-            bias: 0,
-            slope: 0
-        }));
         controller = msg.sender;
         transfersEnabled = true;
         decimals = ERC20(_token).decimals();
-        name = _name;
-        symbol = _symbol;
-        version = _version;
+        name = "Vote-escrowed ARCB";
+        symbol = "veARCB";
+        version = "veARCB_1.0.0 ";
     }
 
     function commitTransferOwnership(address addr) external onlyAdmin {

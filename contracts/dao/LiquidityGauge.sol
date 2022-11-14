@@ -2,6 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./ARCB.sol";
 import "./VotingEscrow.sol";
+import "./VEBoostProxy.sol";
 import "../interfaces/IDAO.sol";
 import "../interfaces/IToken.sol";
 
@@ -46,10 +47,10 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
     uint256 constant public WEEK = 604800;
 
     address public minter;
-    ARCB public immutable ARCB20;
-    VotingEscrow public immutable VOTING_ESCROW;
-    Controller public immutable GAUGE_CONTROLLER;
-    VotingEscrowBoost public immutable VEBOOST_PROXY;
+    ARCB public immutable arcb20;
+    VotingEscrow public immutable votingEscrow;
+    Controller public immutable gaugeController;
+    VEBoostProxy public immutable veBoostProxy;
 
     // string public override name;
     // string public override symbol;
@@ -77,7 +78,7 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
     // reward token -> claiming address -> integral
     mapping(address => mapping(address => uint256)) public rewardIntegralFor;
     // user -> [uint128 claimable amount][uint128 claimed amount]
-    mapping(address => mapping(address => uint256)) claimData;
+    mapping(address => mapping(address => uint256)) private claimData;
 
     address public admin;
     address public futureAdmin;
@@ -96,10 +97,10 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
     // The goal is to be able to calculate ∫(rate * balance / totalSupply dt) from 0 till checkpoint
     // All values are kept in units of being multiplied by 1e18
     uint256 public period;
-    uint256[] public periodTimestamp;
+    mapping(uint256 => uint256) public periodTimestamp;
 
     // 1e18 * ∫(rate(t) / totalSupply(t) dt) from 0 till checkpoint
-    uint256[] public integrateInvSupply;  // bump epoch when rate() changes
+    mapping(uint256 => uint256) public integrateInvSupply;  // bump epoch when rate() changes
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "!admin");
@@ -113,7 +114,7 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
         ARCB _arcb,
         VotingEscrow _votingEscrow,
         Controller _gaugeController,
-        VotingEscrowBoost _veboostProxy
+        VEBoostProxy _veboostProxy
     ) ReentrancyGuard()
       ERC20Permit(string(abi.encodePacked('ArcheBase.fi', IERC20Metadata(_lpToken).symbol(), " Gauge Deposit")))
       ERC20(
@@ -125,10 +126,10 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
         admin = _admin;
         periodTimestamp[0] = block.timestamp;
         minter = _minter;
-        ARCB20 = _arcb;
-        VOTING_ESCROW = _votingEscrow;
-        GAUGE_CONTROLLER = _gaugeController;
-        VEBOOST_PROXY = _veboostProxy;
+        arcb20 = _arcb;
+        votingEscrow = _votingEscrow;
+        gaugeController = _gaugeController;
+        veBoostProxy = _veboostProxy;
         inflationRate = _arcb.rate();
         futureEpochTime = _arcb.futureEpochTimeWrite();
     }
@@ -142,26 +143,26 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
             Effectively it calculates working balances to apply amplification
             of CRV production by CRV
         @param _addr User address
-        @param _l User's amount of liquidity (LP tokens)
-        @param _L Total amount of liquidity (LP tokens)
+        @param _lpUser User's amount of liquidity (LP tokens)
+        @param _lpTotal Total amount of liquidity (LP tokens)
      */
-    function _updateLiquidityLimit(address _addr, uint256 _l, uint256 _L) internal {
+    function _updateLiquidityLimit(address _addr, uint256 _lpUser, uint256 _lpTotal) internal {
         // To be called after totalSupply is updated
-        uint256 votingBalance = VEBOOST_PROXY.adjustedBalanceOf(_addr);
-        uint256 votingTotal = VOTING_ESCROW.totalSupply();
+        uint256 votingBalance = veBoostProxy.adjustedBalanceOf(_addr);
+        uint256 votingTotal = votingEscrow.totalSupply();
 
-        uint256 lim = _l * TOKENLESS_PRODUCTION / 100;
+        uint256 lim = _lpUser * TOKENLESS_PRODUCTION / 100;
         if(votingTotal > 0) {
-            lim += _L * votingBalance / votingTotal * (100 - TOKENLESS_PRODUCTION) / 100;
+            lim += _lpTotal * votingBalance / votingTotal * (100 - TOKENLESS_PRODUCTION) / 100;
         }
 
-        lim = Math.min(_l, lim);
+        lim = Math.min(_lpUser, lim);
         uint256 oldBal = workingBalances[_addr];
         workingBalances[_addr] = lim;
         uint256 _workingSupply = workingSupply + lim - oldBal;
         workingSupply = _workingSupply;
 
-        emit UpdateLiquidityLimit(_addr, _l, _L, lim, _workingSupply);
+        emit UpdateLiquidityLimit(_addr, _lpUser, _lpTotal, lim, _workingSupply);
     }
 
     /**
@@ -230,8 +231,8 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
         uint256 newRate = rate;
         uint256 prevFutureEpoch = futureEpochTime;
         if(prevFutureEpoch >= _periodTime) {
-            futureEpochTime = ARCB20.futureEpochTimeWrite();
-            newRate = ARCB20.rate();
+            futureEpochTime = arcb20.futureEpochTimeWrite();
+            newRate = arcb20.rate();
             inflationRate = newRate;
         }
 
@@ -242,13 +243,13 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
         // Update integral of 1/supply
         if(block.timestamp > _periodTime) {
             uint256 _workingSupply = workingSupply;
-            GAUGE_CONTROLLER.checkpointGauge(_addr);
+            gaugeController.checkpointGauge(_addr);
             uint256 prevWeekTime = _periodTime;
             uint256 weekTime = Math.min((_periodTime + WEEK) / WEEK * WEEK, block.timestamp);
 
             for (uint256 index = 0; index < 500; index++) {
                 uint256 dt = weekTime - prevWeekTime;
-                uint256 w = GAUGE_CONTROLLER.gaugeRelativeWeight(address(this), prevWeekTime / WEEK * WEEK);
+                uint256 w = gaugeController.gaugeRelativeWeight(address(this), prevWeekTime / WEEK * WEEK);
                 
                 if(_workingSupply > 0) {
                     if(prevFutureEpoch >= prevWeekTime && prevFutureEpoch < weekTime) {
@@ -357,7 +358,7 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
                         for the caller
      */
     function claimRewards(address _addr, address _receiver) external nonReentrant {
-        require(_receiver == address(0) || msg.sender == _addr, "Cannot redirect when claiming for another user");
+        require(_receiver == address(0) || msg.sender == _addr, "Cannot redirect claiming");
         _checkpointRewards(_addr, totalSupply(), true, _receiver);
     }
 
@@ -368,10 +369,10 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
      */
     function kick(address _addr) external {
         uint256 tLast = integrateCheckpointOf[_addr];
-        uint256 tVe = VOTING_ESCROW.userPointHistoryTs(_addr, VOTING_ESCROW.userPointEpoch(_addr));
+        uint256 tVe = votingEscrow.userPointHistoryTs(_addr, votingEscrow.userPointEpoch(_addr));
         uint256 _balance = balanceOf(_addr);
 
-        require(VOTING_ESCROW.balanceOf(_addr) == 0 || tVe > tLast, "kick not allowed");
+        require(votingEscrow.balanceOf(_addr) == 0 || tVe > tLast, "kick not allowed");
         require(workingBalances[_addr] > _balance * TOKENLESS_PRODUCTION / 100, "kick not allowed");
 
         _checkpoint(_addr);
@@ -454,9 +455,9 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
     function setRewardDistributor(address _rewardToken, address _distributor) external {
         address currentDistributor = rewardData[_rewardToken].distributor;
 
-        require(msg.sender == currentDistributor || msg.sender == admin);
-        require(currentDistributor != address(0));
-        require(_distributor != address(0));
+        require(msg.sender == currentDistributor || msg.sender == admin, "Forbidden");
+        require(currentDistributor != address(0), "Distributor is not set");
+        require(_distributor != address(0), "Invalid distributor");
 
         rewardData[_rewardToken].distributor = _distributor;
     }

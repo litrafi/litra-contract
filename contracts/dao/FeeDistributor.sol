@@ -1,9 +1,9 @@
 pragma solidity ^0.8.0;
 
-import "./ARCB.sol";
 import "./VotingEscrow.sol";
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SignedMath.sol";
 
 contract FeeDistributor is ReentrancyGuard {
@@ -31,7 +31,7 @@ contract FeeDistributor is ReentrancyGuard {
     uint256[] public tokensPerWeek;
 
     VotingEscrow public votingEscrow;
-    ARCB public token;
+    IERC20 public token;
     uint256 public totalReceived;
     uint256 public tokenLastBalance;
     // VE total supply at week bounds
@@ -65,7 +65,7 @@ contract FeeDistributor is ReentrancyGuard {
     constructor(
         VotingEscrow _votingEscow,
         uint256 _startTime,
-        ARCB _token,
+        IERC20 _token,
         address _admin,
         address _emergencyReturn
     ) {
@@ -127,7 +127,7 @@ contract FeeDistributor is ReentrancyGuard {
         _checkpointToken();
     }
 
-    function _findTimestampEpoch(uint256 _timestamp) internal returns(uint256) {
+    function _findTimestampEpoch(uint256 _timestamp) internal view returns(uint256) {
         uint256 _min = 0;
         uint256 _max = votingEscrow.epoch();
         for (uint256 index = 0; index < 128; index++) {
@@ -319,8 +319,8 @@ contract FeeDistributor is ReentrancyGuard {
 
         uint256 amount = _claim(_addr, _lastTokenTime);
         if(amount != 0) {
-            require(token.transfer(_addr, amount));
             tokenLastBalance -= amount;
+            token.transfer(_addr, amount);
         }
 
         return amount;
@@ -348,8 +348,7 @@ contract FeeDistributor is ReentrancyGuard {
         }
 
         _lastTokenTime = _lastTokenTime / 1 weeks * 1 weeks;
-        VotingEscrow ve = votingEscrow;
-        ARCB _token = token;
+        IERC20 _token = token;
         uint256 total = 0;
 
         for (uint256 index = 0; index < _receivers.length; index++) {
@@ -374,7 +373,7 @@ contract FeeDistributor is ReentrancyGuard {
         @return bool success
      */
     function burn() external notKilled returns(bool) {
-        ARCB _token = token;
+        IERC20 _token = token;
 
         uint256 amount = _token.balanceOf(msg.sender);
         if(amount != 0) {
@@ -406,7 +405,7 @@ contract FeeDistributor is ReentrancyGuard {
 
     function killMe() external onlyAdmin {
         isKiiled = true;
-        ARCB _token = token;
+        IERC20 _token = token;
         _token.transfer(emergencyReturn, _token.balanceOf(address(this)));
     }
 

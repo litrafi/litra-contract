@@ -1,6 +1,9 @@
 import { ethers } from "hardhat";
 import { DeployRecorder } from "../../scripts/lib/deploy-recorder";
 
+export const WEEK = 3600 * 24 * 7; 
+export const YEAR = 3600 * 24 * 365; 
+
 export function clear() {
     DeployRecorder.getDeployRecorder().clearTestRecorder();
 }

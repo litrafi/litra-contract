@@ -51,7 +51,7 @@ contract GaugeController {
     // Total vote power used by user
     mapping(address => uint256) public voteUserPower;
     // Last user vote's timestamp for each gauge address
-    mapping(address => mapping(address => uint256)) lastUserVote;
+    mapping(address => mapping(address => uint256)) public lastUserVote;
 
     // Past and scheduled points for gauge weight, sum of weights per type, total weight
     // Point is for bias+slope
@@ -71,7 +71,7 @@ contract GaugeController {
     // type_id -> time -> slope
     mapping(uint256 => mapping(uint256 => uint256)) private changesSum;
     // type_id -> last scheduled time (next week)
-    uint256[] public timeSum;
+    mapping(uint256 => uint256) public timeSum;
 
     // time -> total weight
     mapping(uint256 => uint256) public pointsTotal;
@@ -81,7 +81,7 @@ contract GaugeController {
     // type_id -> time -> type weight
     mapping(uint256 => mapping(uint256 => uint256)) public pointsTypeWeight;
     // type_id -> last scheduled time (next week)
-    uint256[] public timeTypeWeight;
+    mapping(uint256 => uint256) public timeTypeWeight;
 
     modifier onlyAdmin {
         require(msg.sender == admin, "!admin");
@@ -89,8 +89,8 @@ contract GaugeController {
     }
 
     constructor(address _token, address _votingEscrow) {
-        require(_token != address(0));
-        require(_votingEscrow != address(0));
+        require(_token != address(0), "Invalid token");
+        require(_votingEscrow != address(0), "Invalid ve");
 
         token = ARCB(_token);
         votingEscrow = VotingEscrow(_votingEscrow);
@@ -258,7 +258,7 @@ contract GaugeController {
         @param _weight Gauge weight
      */
     function addGauge(address _addr, uint256 _gaugeType, uint256 _weight) external onlyAdmin {
-        require(_gaugeType < nGaugeTypes);
+        require(_gaugeType < nGaugeTypes, "Invalid gauge type");
         require(gaugeTypes_[_addr] == 0, "Cannot add the same gauge twice");
 
         gauges.push(_addr);
@@ -336,7 +336,7 @@ contract GaugeController {
     function gaugeRelativeWeightWrite(address _addr, uint256 _time) public returns(uint256) {
         _getWeight(_addr);
         _getTotal();
-        _gaugeRelativeWeight(_addr, _time);
+        return _gaugeRelativeWeight(_addr, _time);
     }
 
     function gaugeRelativeWeightWrite(address _addr) external returns(uint256) {
@@ -434,8 +434,8 @@ contract GaugeController {
             oldBias = oldSlope.slope * oldDt;
             newSlope = VotedSlope(
                 slope * _userWeight / 10000,
-                lockEnd,
-                _userWeight
+                _userWeight,
+                lockEnd
             );
             uint256 newDt = lockEnd - nextTime;
             newBias = newSlope.slope * newDt;
@@ -445,6 +445,7 @@ contract GaugeController {
             // Check and update powers (weights) used
             uint256 powerUsed = voteUserPower[msg.sender];
             powerUsed = powerUsed + newSlope.power - oldSlope.power;
+            console.log(powerUsed, newSlope.power, oldSlope.power);
             voteUserPower[msg.sender] = powerUsed;
             require(powerUsed <= 10000, "Used too much power");
         }
