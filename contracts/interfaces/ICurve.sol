@@ -1,5 +1,14 @@
 pragma solidity ^0.8.0;
 
+interface ICurvePool {
+    function exchange(uint256 i, uint256 j, uint256 dx, uint256 minDy, bool use_eth, address payable _receiver) external payable;
+    function coins(uint256 i) external view returns(address);
+}
+
+interface IPoolFactory {
+    function find_pool_for_coins(address _from, address _to) external view returns(address);
+}
+
 interface IMetapool {
     function token() external view returns(address);
     function coins(uint256 index) external view returns(address);

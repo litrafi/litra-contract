@@ -1,10 +1,11 @@
+/* eslint-disable no-unused-expressions */
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers"
 import { ethers } from "hardhat";
-import { E18 } from "../../scripts/lib/constant";
+import { E18, ZERO } from "../../scripts/lib/constant";
 import { construcAndWait } from "../../scripts/lib/utils";
-import { ARCB, GaugeController, LiquidityGauge, Minter, MockERC20, VEBoostProxy, VotingEscrow } from "../../typechain"
+import { ARCB, FeeDistributor, FeeManager, GaugeController, LiquidityGauge, Minter, MockERC20, MockPoolFactory, SimpleBurner, VEBoostProxy, VotingEscrow, WBNB } from "../../typechain"
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { currentTime, fastForward, fastForwardTo, WEEK, YEAR } from "../mock-util/env.util";
 import { expectCloseTo, shouldThrow } from "../mock-util/expect-plus.util";
@@ -36,12 +37,12 @@ describe('DAO', () => {
     describe('ARCB mining', () => {
         it('Start mining', async () => {
             let rate = await arcb.rate();
-            expect(rate.eq(0));
+            expect(rate.eq(0)).true;
             await shouldThrow(arcb.updateMiningParamters(), 'Not time');
             await fastForward(LAUNCH_DELY);
             await arcb.updateMiningParamters();
             rate = await arcb.rate();
-            expect(rate.eq(INITIAL_RATE))
+            expect(rate.eq(INITIAL_RATE)).true
         })
 
         it('Run 2 years', async () => {
@@ -50,7 +51,7 @@ describe('DAO', () => {
             for (let index = 0; index < 2; index++) {
                 await arcb.updateMiningParamters();
                 const _rate = await arcb.rate();
-                expect(_rate.eq(currenRate));
+                expect(_rate.eq(currenRate)).true;
                 
                 await fastForward(31536000)
                 currenRate = currenRate.mul(E18).div('1252000000000000000');
@@ -78,21 +79,21 @@ describe('DAO', () => {
                 await comparator.setBeforeBalance(arcb.address);
                 await votingEscrow.createLock(ARCB_BALANCE, UNLOCK_TIME);
                 await comparator.setAfterBalance(arcb.address);
-                expect(comparator.compare(arcb.address).eq(LOCK_VALUE));
+                expect(comparator.compare(arcb.address).eq(LOCK_VALUE)).true;
                 // check balance
                 let veBalance = await votingEscrow["balanceOf(address)"](defaultUser.address);
                 expectCloseTo(veBalance, LOCK_VALUE.mul(LOCK_DURATION).div(MAX_LOCK_TIME), 2)
                 // Half time passed
                 await fastForward(LOCK_DURATION / 2);
                 veBalance = await votingEscrow["balanceOf(address)"](defaultUser.address);
-                expectCloseTo(veBalance, LOCK_VALUE.mul(LOCK_DURATION).div(MAX_LOCK_TIME).div(2), 2);
+                expectCloseTo(veBalance, LOCK_VALUE.mul(LOCK_DURATION).div(MAX_LOCK_TIME).div(2), 1);
                 // Withdraw
                 await shouldThrow(votingEscrow.withdraw(), `The lock didn't expire`);
                 await fastForward(LOCK_DURATION / 2);
                 await comparator.setBeforeBalance(arcb.address);
                 await votingEscrow.withdraw();
                 await comparator.setAfterBalance(arcb.address);
-                expect(comparator.compare(arcb.address).eq(LOCK_VALUE));
+                expect(comparator.compare(arcb.address).eq(LOCK_VALUE)).true;
             })
 
             it('Deposit for', async () => {
@@ -185,12 +186,11 @@ describe('DAO', () => {
                 const GAUGE_TYPE = 0;
                 const { lpToken, gauge } = await deployGauge(defaultUser.address, GAUGE_TYPE, GAUGE_WEIGHT);
                 // Wait weight to take effect
-                let timeWeight = await gaugeController.timeWeight(gauge.address);
+                const timeWeight = await gaugeController.timeWeight(gauge.address);
                 let weight = await gaugeController["gaugeRelativeWeight(address)"](gauge.address);
-                expect(weight.eq(0))
                 await fastForwardTo(timeWeight.toNumber());
                 weight = await gaugeController["gaugeRelativeWeight(address)"](gauge.address);
-                expect(weight.eq(BigNumber.from(E18).mul(GAUGE_WEIGHT)))
+                expect(weight.eq(BigNumber.from(E18).mul(GAUGE_WEIGHT))).true
                 // stake
                 const STAKE_AMOUNT = BigNumber.from(E18);
                 await lpToken.mint(defaultUser.address, STAKE_AMOUNT);
@@ -198,27 +198,18 @@ describe('DAO', () => {
                 await gauge.deposit(STAKE_AMOUNT, defaultUser.address, false);
                 // Check claimable
                 let rewards = await callClaimableTokens(gauge, defaultUser)
-                expect(rewards.eq(0))
+                expect(rewards.eq(0)).true
                 await fastForward(WEEK)
                 rewards = await callClaimableTokens(gauge, defaultUser)
-                expect(rewards.eq(BigNumber.from(INITIAL_RATE).mul(WEEK)));
+                expectCloseTo(rewards, BigNumber.from(INITIAL_RATE).mul(WEEK));
                 weight = await gaugeController["gaugeRelativeWeight(address)"](gauge.address);
-                expect(weight.eq(0))
+                expect(weight.eq(0)).true
                 // Get reward
                 const comparator = new BalanceComparator(defaultUser.address);
                 await comparator.setBeforeBalance(arcb.address);
                 await minter.mint(gauge.address);
                 await comparator.setAfterBalance(arcb.address)
-                expect(comparator.compare(arcb.address).eq(rewards));
-                // Change weight
-                const CHANGED_GAUGE_WEIGHT = 2;
-                await gaugeController.changeGaugeWeight(gauge.address, CHANGED_GAUGE_WEIGHT);
-                weight = await gaugeController["gaugeRelativeWeight(address)"](gauge.address);
-                expect(weight.eq(0))
-                timeWeight = await gaugeController.timeWeight(gauge.address);
-                await fastForwardTo(timeWeight.toNumber());
-                weight = await gaugeController["gaugeRelativeWeight(address)"](gauge.address);
-                expect(weight.eq(BigNumber.from(E18).mul(CHANGED_GAUGE_WEIGHT)));
+                expect(comparator.compare(arcb.address).eq(rewards)).true;
             })
 
             it('Add two gauge with different type', async () => {
@@ -228,9 +219,20 @@ describe('DAO', () => {
                 const GAUGE_WEIGHT_1 = 1;
 
                 const { lpToken: lpToken0, gauge: gauge0 } = await deployGauge(defaultUser.address, GAUGE_TYPE_0, GAUGE_WEIGHT_0);
-                await deployGauge(defaultUser.address, GAUGE_TYPE_1, GAUGE_WEIGHT_1);
-                // Weight take effect
+                const { gauge: gauge1 } = await deployGauge(defaultUser.address, GAUGE_TYPE_1, GAUGE_WEIGHT_1);
+                // confirm weight
                 const timeWeight = await gaugeController.timeWeight(gauge0.address);
+                let weight0 = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge0.address, timeWeight);
+                let weight1 = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge1.address, timeWeight);
+                expect(weight0).deep.eq(BigNumber.from(E18).mul(2).div(3));
+                expect(weight1).deep.eq(BigNumber.from(E18).div(3));
+                // change weight
+                await gaugeController.changeGaugeWeight(gauge1.address, 2);
+                weight0 = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge0.address, timeWeight);
+                weight1 = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge1.address, timeWeight);
+                expect(weight0).deep.eq(BigNumber.from(E18).div(2));
+                expect(weight1).deep.eq(BigNumber.from(E18).div(2));
+                // Weight take effect
                 await fastForwardTo(timeWeight.toNumber());
                 // Stake
                 const STAKE_AMOUNT = BigNumber.from(E18);
@@ -242,9 +244,9 @@ describe('DAO', () => {
                 const rewards = await callClaimableTokens(gauge0, defaultUser);
                 const expectClaimable = BigNumber.from(INITIAL_RATE)
                     .mul(WEEK)
-                    .mul(GAUGE_WEIGHT_0 * GAUGE_WEIGHTS[0])
-                    .div(GAUGE_WEIGHT_0 * GAUGE_WEIGHTS[0] + GAUGE_WEIGHT_1 * GAUGE_WEIGHTS[1])
-                expect(rewards.eq(expectClaimable));
+                    .mul(weight0)
+                    .div(weight0.add(weight1))
+                expectCloseTo(rewards, expectClaimable);
             } )
         })
 
@@ -266,15 +268,157 @@ describe('DAO', () => {
                 const USER_WEIGHT = 5000;
                 const timeWeight = await gaugeController.timeWeight(gauge0.address);
                 let nextWeight = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge0.address, timeWeight);
-                expect(nextWeight.eq(0));
+                expect(nextWeight.eq(0)).true;
                 await gaugeController.voteForGaugeWeights(gauge0.address, USER_WEIGHT);
                 nextWeight = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge0.address, timeWeight);
-                expect(nextWeight.eq(BigNumber.from(E18)));
+                expect(nextWeight.eq(BigNumber.from(E18))).true;
                 await gaugeController.voteForGaugeWeights(gauge1.address, USER_WEIGHT);
                 nextWeight = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge0.address, timeWeight);
-                expect(nextWeight.eq(BigNumber.from(E18).div(2)));
+                expect(nextWeight.eq(BigNumber.from(E18).div(2))).true;
             })
         })
     })
 
+    describe('Fee', () => {
+        let feeManager: FeeManager & Contract;
+        let feeDistributor: FeeDistributor & Contract;
+        let wnft: MockERC20 & Contract;
+
+        let ownerAdmin: SignerWithAddress,
+            parameterAdmin: SignerWithAddress,
+            emergencyAdmin: SignerWithAddress;
+        
+        let startTime;
+        const COLLECTED_FEE = BigNumber.from(E18);
+
+        beforeEach(async () => {
+            const users = await ethers.getSigners();
+            ownerAdmin = users[1];
+            parameterAdmin = users[2];
+            emergencyAdmin = users[3];;
+
+            startTime = await currentTime();
+            feeDistributor = await construcAndWait('FeeDistributor', [votingEscrow.address, startTime, ownerAdmin.address, emergencyAdmin.address])
+            feeManager = await construcAndWait('FeeManager', [ownerAdmin.address, parameterAdmin.address, emergencyAdmin.address]);
+            wnft = await construcAndWait('MockERC20', ['Wrapped NFT', 'WNFT']);
+            // deploy and set burner
+            const weth = await construcAndWait<WBNB>('WBNB');
+            const factory = await construcAndWait<MockPoolFactory>('MockPoolFactory', [weth.address]);
+            await factory.deployPool(wnft.address, weth.address);
+            const poolAddr = await factory.find_pool_for_coins(wnft.address, weth.address);
+            const vaultUser = users[9];
+            await vaultUser.sendTransaction({
+                to: poolAddr,
+                value: E18
+            })
+            const burner = await construcAndWait<SimpleBurner>('SimpleBurner', [
+                ownerAdmin.address,
+                emergencyAdmin.address,
+                feeDistributor.address,
+                weth.address,
+                factory.address
+            ])
+            await feeManager.connect(ownerAdmin).setBurner(wnft.address, burner.address);
+            // Simulate fee manager get fee
+            await wnft.mint(feeManager.address, COLLECTED_FEE);
+        })
+
+        describe('Set fee', () => {
+            it('Succeed to set', async () => {
+                const DEFAULT_WRAP_FEE = 100;
+                const DEFAULT_UNWRAP_FEE = 200;
+                const WRAP_FEE = 300;
+                const UNWRAP_FEE = 400;
+
+                await feeManager.connect(parameterAdmin).setDefaultWrapFee(DEFAULT_WRAP_FEE);
+                const defaultWrapFee = await feeManager.defaultWrapFee();
+                expect(defaultWrapFee.toNumber()).eq(DEFAULT_WRAP_FEE);
+
+                await feeManager.connect(parameterAdmin).setDefaultUnwrapFee(DEFAULT_UNWRAP_FEE);
+                const defaultUnwrapFee = await feeManager.defaultUnwrapFee();
+                expect(defaultUnwrapFee.toNumber()).eq(DEFAULT_UNWRAP_FEE);
+
+                const WNFT_ADDR = ZERO;
+
+                await feeManager.connect(parameterAdmin).setWrapFee(WNFT_ADDR, WRAP_FEE);
+                const wrapFee = await feeManager.wrapFees(WNFT_ADDR);
+                expect(wrapFee.toNumber()).eq(WRAP_FEE);
+
+                await feeManager.connect(parameterAdmin).setUnwrapFee(WNFT_ADDR, UNWRAP_FEE);
+                const unwrapFee = await feeManager.unwrapFees(WNFT_ADDR);
+                expect(unwrapFee.toNumber()).eq(UNWRAP_FEE);
+            })
+
+            it('Fail to set', async () => {
+                const FEE = 100;
+                const WNFT_ADDR = ZERO;
+                
+                expect(defaultUser.address).not.eq(parameterAdmin.address);
+                await shouldThrow(feeManager.setDefaultWrapFee(FEE), '! parameter admin') ;
+                await shouldThrow(feeManager.setDefaultUnwrapFee(FEE), '! parameter admin') ;
+                await shouldThrow(feeManager.setWrapFee(WNFT_ADDR, FEE), '! parameter admin') ;
+                await shouldThrow(feeManager.setUnwrapFee(WNFT_ADDR, FEE), '! parameter admin') ;
+            })
+        })
+
+        describe('Burn', () => {
+            it('Succeed to burn', async () => {
+                const receiverComparator = new BalanceComparator(feeDistributor.address);
+                let feeBalance = await wnft.balanceOf(feeManager.address);
+                await receiverComparator.setBeforeBalance(ZERO);
+                await feeManager.burn(wnft.address);
+                await receiverComparator.setAfterBalance(ZERO);
+                expect(receiverComparator.compare(ZERO).eq(feeBalance)).true;
+                feeBalance = await wnft.balanceOf(feeManager.address);
+                expect(feeBalance.eq(0)).true;
+            })
+        })
+
+        describe('Distribute Fee', () => {
+            async function callClaimable(user: SignerWithAddress) {
+                const reward = await user.call({
+                    to: feeDistributor.address,
+                    data: feeDistributor.interface.encodeFunctionData("claim", [user.address])
+                })
+                return BigNumber.from(reward)
+            }
+
+            it('Burn and distribute fee', async () => {
+                // burn fee
+                await feeDistributor.connect(ownerAdmin).checkpointToken();
+                await feeDistributor.connect(ownerAdmin).toggleAllowCheckpointToken();
+                await feeManager.burn(wnft.address);
+                // Get veARCB before checkpoint
+                const DEPOSIT_ARCB_AMOUNT = BigNumber.from(E18);
+                const LOCK_DURATION = YEAR * 2;
+                const now = await currentTime();
+                const UNLOCK_TIME = now + LOCK_DURATION;
+                await arcb.approve(votingEscrow.address, DEPOSIT_ARCB_AMOUNT);
+                await votingEscrow.createLock(DEPOSIT_ARCB_AMOUNT, UNLOCK_TIME);
+                // Claim reward
+                // first week
+                // weekCursor = (ts + 1 weeks - 1) / 1 weeks * 1 weeks
+                // weekCursor > now / week * week, return 0
+                let claimable = await callClaimable(defaultUser);
+                expect(claimable).deep.eq(BigNumber.from(0));
+                // second week
+                // weekCursor = now / week * week, return 0
+                await fastForward(WEEK);
+                claimable = await callClaimable(defaultUser);
+                expect(claimable).deep.eq(BigNumber.from(0));
+                // third week
+                // weekCursor < now / week * week, return 0
+                // get reward of last week
+                await fastForward(WEEK);
+                claimable = await callClaimable(defaultUser);
+                expect(claimable).not.deep.eq(BigNumber.from(0));
+                // claim
+                const comparator = new BalanceComparator(defaultUser.address);
+                await comparator.setBeforeBalance(ZERO);
+                await feeDistributor.claim(defaultUser.address);
+                await comparator.setAfterBalance(ZERO);
+                expectCloseTo(comparator.compare(ZERO), claimable, 2)
+            })
+        })
+    })
 })

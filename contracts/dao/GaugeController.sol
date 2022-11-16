@@ -445,7 +445,6 @@ contract GaugeController {
             // Check and update powers (weights) used
             uint256 powerUsed = voteUserPower[msg.sender];
             powerUsed = powerUsed + newSlope.power - oldSlope.power;
-            console.log(powerUsed, newSlope.power, oldSlope.power);
             voteUserPower[msg.sender] = powerUsed;
             require(powerUsed <= 10000, "Used too much power");
         }

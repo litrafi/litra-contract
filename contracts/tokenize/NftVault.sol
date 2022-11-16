@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./FToken.sol";
+import "./WrappedNFT.sol";
 import "../utils/NftReceiver.sol";
+import "../interfaces/IFeeManager.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -10,126 +11,134 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract NftVault is Ownable, ReentrancyGuard, NftReceiver {
-    event CreateFToken(address indexed nft, uint256 ftId, address ft);
-    event Fungiblize(address indexed creator, uint256 ftId, uint256 nftId);
-    event Redeem(address indexed redeemer, uint256 ftId, uint256 nftId);
+    event CreateWrappedNFT(address indexed nft, uint256 wnftId, address wnft);
+    event Fungiblize(address indexed creator, uint256 wnftId, uint256 nftId);
+    event Redeem(address indexed redeemer, uint256 wnftId, uint256 nftId);
 
     using EnumerableSet for EnumerableSet.UintSet;
 
     // Record of NFT fungiblized
-    struct FungiblizedNFT {
+    struct WrappedNFTInfo {
         address nftAddr;
         uint256 tokenId;
         bool inVault;
     }
 
-    // Fungible Token
-    struct FTInfo {
+    // WNFT Info
+    struct WNFTInfo {
         address nftAddr;
-        address ftAddr;
+        address wnftAddr;
     }
 
-    mapping(uint256 => FTInfo) public fts;
-    uint256 public nextFtId = 1;
+    mapping(uint256 => WNFTInfo) public wnfts;
+    uint256 public nextWnftId = 1;
     // [nftAdd/ftAddr] => ftId
-    mapping(address => uint256) public ftIds;
-    FungiblizedNFT[] public fungiblizedNFTs;
-    mapping(uint256 => EnumerableSet.UintSet) private _ftNfts;
+    mapping(address => uint256) public wnftIds;
+    WrappedNFTInfo[] public wrappedNfts;
+    mapping(uint256 => EnumerableSet.UintSet) private _nfts;
+    address public feeManager;
 
-    constructor() Ownable() ReentrancyGuard()  {}
+    constructor() Ownable() ReentrancyGuard() {}
 
-    function fungiblize (
+    function setFeeManager(address _feeManager) external onlyOwner {
+        feeManager = _feeManager;
+    }
+
+    function wrap (
         address _nftAddr,
         uint256 _tokenId
-    ) external nonReentrant {
+    ) external payable nonReentrant {
         IERC721(_nftAddr).transferFrom(msg.sender, address(this), _tokenId);
         // Save nft record
-        uint256 recordId = fungiblizedNFTs.length;
-        fungiblizedNFTs.push(FungiblizedNFT(_nftAddr, _tokenId, true));
+        uint256 recordId = wrappedNfts.length;
+        wrappedNfts.push(WrappedNFTInfo(_nftAddr, _tokenId, true));
         // Get FT Info
-        uint256 ftId = ftIds[_nftAddr];
-        address ft;
-        if(ftId == 0) {
+        uint256 wnftId = wnftIds[_nftAddr];
+        address wnft;
+        if(wnftId == 0) {
             // Create a new FT
-            string memory ftName;
-            string memory ftSymbol;
+            string memory wnftName;
+            string memory wnftSymbol;
             (bool succeed, bytes memory result) = _nftAddr.call(abi.encodeWithSignature("name()"));
             if(succeed) {
                 string memory nftName = abi.decode(result, (string));
-                ftName = string(abi.encodePacked(nftName, " Fungible Token"));
+                wnftName = string(abi.encodePacked(nftName, " Wrapped NFT"));
             } else {
-                ftName = string(abi.encodePacked("Litra FT#", ftId));
+                wnftName = string(abi.encodePacked("Litra FT#", wnftId));
             }
             (succeed, result) = _nftAddr.call(abi.encodeWithSignature("symbol()"));
             if(succeed) {
                 string memory nftSymbol = abi.decode(result, (string));
-                ftSymbol = string(abi.encodePacked(nftSymbol, "ft"));
+                wnftSymbol = string(abi.encodePacked(nftSymbol, "wnft"));
             } else {
-                ftSymbol = string(abi.encodePacked("LFT#", ftId));
+                wnftSymbol = string(abi.encodePacked("LWNFT#", wnftId));
             }
-            ft = address(new FToken(ftName, ftSymbol));
+            wnft = address(new WrappedNFT(wnftName, wnftSymbol));
             // get ftId
-            uint256 _nextFtId = nextFtId;
-            ftId = _nextFtId;
-            _nextFtId ++;
-            nextFtId = _nextFtId;
+            uint256 _nextWnftId = nextWnftId;
+            wnftId = _nextWnftId;
+            _nextWnftId ++;
+            nextWnftId = _nextWnftId;
             // storage
-            fts[ftId] = FTInfo(_nftAddr, ft);
-            ftIds[_nftAddr] = ftId;
-            ftIds[ft] = ftId;
+            wnfts[wnftId] = WNFTInfo(_nftAddr, wnft);
+            wnftIds[_nftAddr] = wnftId;
+            wnftIds[wnft] = wnftId;
             
-            emit CreateFToken(_nftAddr, ftId, ft);
+            emit CreateWrappedNFT(_nftAddr, wnftId, wnft);
         } else {
-            ft = fts[ftId].ftAddr;
+            wnft = wnfts[wnftId].wnftAddr;
         }
         // bound FT and NFT
-        _ftNfts[ftId].add(recordId);
-        // mint for user
-        FToken(ft).mint(msg.sender, 1e18);
+        _nfts[wnftId].add(recordId);
+        // mint and charge fee
+        if(feeManager == address(0)) {
+            WrappedNFT(wnft).mint(msg.sender, 1e18);
+        } else {
+            WrappedNFT(wnft).mint(address(feeManager), 1e18);
+            IFeeManager(feeManager).chargeWrapFee{value: msg.value}(_nftAddr, wnft, msg.sender);
+        }
 
-        emit Fungiblize(msg.sender, ftId, recordId);
+        emit Fungiblize(msg.sender, wnftId, recordId);
     }
 
     function nftsLength() external view returns(uint256) {
-        return fungiblizedNFTs.length;
+        return wrappedNfts.length;
     }
 
-    function nftsInFt(uint256 _ftId) external view returns(uint256[] memory) {
-        uint256 arrLength = _ftNfts[_ftId].length();
+    function nftsInWnft(uint256 _wnftId) external view returns(uint256[] memory) {
+        uint256 arrLength = _nfts[_wnftId].length();
         uint256[] memory nfts = new uint256[](arrLength);
         for (uint256 index = 0; index < arrLength; index++) {
-            nfts[index] = _ftNfts[_ftId].at(index);
+            nfts[index] = _nfts[_wnftId].at(index);
         }
         return nfts;
     }
 
     /**
         @notice Redeem nft from vault and burn one FT
-        @param _ftId index of fts
+        @param _wnftId index of fts
         @param _nftId Greate than or equal 0 to redeem a designated nft with a more fees
                         Less than 0 to redeem a recent fungiblized nft with a normal fee
      */
-    function redeem(uint256 _ftId, int256 _nftId) external {
-        FTInfo memory ftInfo = fts[_ftId];
+    function unwrap(uint256 _wnftId, uint256 _nftId) external payable nonReentrant {
+        WNFTInfo memory ftInfo = wnfts[_wnftId];
         require(ftInfo.nftAddr != address(0), "Invalid FT");
-        require(FToken(ftInfo.ftAddr).balanceOf(msg.sender) >= 1e18, "Insufficient ft");
-        require(_ftNfts[_ftId].length() > 0, "No NFT in vault");
-        require(_nftId < 0 || _ftNfts[_ftId].contains(uint256(_nftId)), "Invalid nftId");
-        // burn ft
-        FToken(ftInfo.ftAddr).burn(msg.sender, 1e18);
-        // return nft
-        uint256 returnedNftId;
-        if(_nftId < 0) {
-            // return the recent fungiblized nft
-            returnedNftId = _ftNfts[_ftId].at(_ftNfts[_ftId].length() - 1);
+        require(WrappedNFT(ftInfo.wnftAddr).balanceOf(msg.sender) >= 1e18, "Insufficient ft");
+        require(_nfts[_wnftId].length() > 0, "No NFT in vault");
+        require(_nfts[_wnftId].contains(uint256(_nftId)), "Invalid nftId");
+        // burn ft and charge fee
+        if(feeManager == address(0)) {
+            WrappedNFT(ftInfo.wnftAddr).burn(msg.sender, 1e18);
         } else {
-            returnedNftId = uint256(_nftId);
+            IFeeManager(feeManager).chargeUnWrapFee{value: msg.value}(ftInfo.wnftAddr, msg.sender);
+            WrappedNFT(ftInfo.wnftAddr).burn(feeManager, 1e18);
         }
-        FungiblizedNFT memory nftInfo = fungiblizedNFTs[returnedNftId];
-        fungiblizedNFTs[returnedNftId].inVault = false;
-        _ftNfts[_ftId].remove(returnedNftId);
+        // return nft
+        WrappedNFTInfo memory nftInfo = wrappedNfts[_nftId];
+        wrappedNfts[_nftId].inVault = false;
+        _nfts[_wnftId].remove(_nftId);
         IERC721(nftInfo.nftAddr).safeTransferFrom(address(this), msg.sender, nftInfo.tokenId);
 
-        emit Redeem(msg.sender, _ftId, returnedNftId);
+        emit Redeem(msg.sender, _wnftId, _nftId);
     }
 }
