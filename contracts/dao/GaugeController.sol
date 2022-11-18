@@ -3,12 +3,11 @@ pragma solidity ^0.8.0;
 import "./LA.sol";
 import "./VotingEscrow.sol";
 import "../interfaces/IDAO.sol";
+import "./admin/OwnershipAdminManaged.sol";
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
-contract GaugeController {
-    event CommitOwnership(address admin);
-    event ApplyOwnership(address admin);
+contract GaugeController is OwnershipAdminManaged {
     event AddType(string name, uint256 typeId);
     event NewTypeWeight(uint256 typeId, uint256 time, uint256 weight, uint256 totalWeight);
     event NewGaugeWeight(address gaugeAddress, uint256 weight, uint256 totalWeight);
@@ -29,7 +28,6 @@ contract GaugeController {
     uint256 constant public WEIGHT_VOTE_DELAY = 10 days;
     uint256 constant public MULTIPLIER = 1e18;
 
-    address public admin;
     address public futureAdmin;
 
     LA public token; // LA token
@@ -83,31 +81,13 @@ contract GaugeController {
     // type_id -> last scheduled time (next week)
     mapping(uint256 => uint256) public timeTypeWeight;
 
-    modifier onlyAdmin {
-        require(msg.sender == admin, "!admin");
-        _;
-    }
-
-    constructor(address _token, address _votingEscrow) {
+    constructor(address _token, address _votingEscrow) OwnershipAdminManaged(msg.sender) {
         require(_token != address(0), "Invalid token");
         require(_votingEscrow != address(0), "Invalid ve");
 
         token = LA(_token);
         votingEscrow = VotingEscrow(_votingEscrow);
-        admin = msg.sender;
         timeTotal = block.timestamp / 1 weeks * 1 weeks;
-    }
-
-    function commitTransferOwnership(address _addr) external onlyAdmin {
-        futureAdmin = _addr;
-        emit CommitOwnership(_addr);
-    }
-
-    function applyTransferOwnership() external onlyAdmin {
-        address _admin = futureAdmin;
-        require(_admin != address(0), "Admin not set");
-        admin = _admin;
-        emit ApplyOwnership(_admin);
     }
 
     function gaugeTypes(address _addr) public view returns(uint256) {
@@ -257,7 +237,7 @@ contract GaugeController {
         @param _gaugeType Gauge type
         @param _weight Gauge weight
      */
-    function addGauge(address _addr, uint256 _gaugeType, uint256 _weight) external onlyAdmin {
+    function addGauge(address _addr, uint256 _gaugeType, uint256 _weight) external onlyOwnershipAdmin {
         require(_gaugeType < nGaugeTypes, "Invalid gauge type");
         require(gaugeTypes_[_addr] == 0, "Cannot add the same gauge twice");
 
@@ -368,7 +348,7 @@ contract GaugeController {
         @param _name Name of gauge type
         @param _weight Weight of gauge type
      */
-    function addType(string memory _name, uint256 _weight) external onlyAdmin {
+    function addType(string memory _name, uint256 _weight) external onlyOwnershipAdmin {
         uint256 typeId = nGaugeTypes;
         gaugeTypeNames[typeId] = _name;
         nGaugeTypes = typeId + 1;
@@ -378,7 +358,7 @@ contract GaugeController {
         }
     }
 
-    function changeTypeWeight(uint256 _typeId, uint256 _weight) external onlyAdmin {
+    function changeTypeWeight(uint256 _typeId, uint256 _weight) external onlyOwnershipAdmin {
         _changeTypeWeight(_typeId, _weight);
     }
 
@@ -404,7 +384,7 @@ contract GaugeController {
         emit NewGaugeWeight(_addr, _weight, _totalWeight);
     }
 
-    function changeGaugeWeight(address _addr, uint256 _weight) external onlyAdmin {
+    function changeGaugeWeight(address _addr, uint256 _weight) external onlyOwnershipAdmin {
         _changeGaugeWeight(_addr, _weight);
     }
 

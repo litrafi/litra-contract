@@ -15,7 +15,12 @@ abstract contract ParameterAdminManaged is OwnershipAdminManaged {
         _;
     }
 
-    function commitParameterAdmin(address _o) external onlyOwnershipAdmin {
-        futureParameterAdmin = _o;
+    function commitParameterAdmin(address _p) external onlyOwnershipAdmin {
+        futureParameterAdmin = _p;
+    }
+
+    function applyParameterAdmin() external {
+        require(msg.sender == futureParameterAdmin, "Access denied!");
+        parameterAdmin = futureParameterAdmin;
     }
 }

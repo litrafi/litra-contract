@@ -17,21 +17,33 @@ describe('DAO', () => {
     let minter: Minter & Contract;
     let veBoostProxy: VEBoostProxy & Contract;
 
-    let defaultUser: SignerWithAddress;
+    let defaultUser: SignerWithAddress,
+        ownerAdmin: SignerWithAddress,
+        parameterAdmin: SignerWithAddress,
+        emergencyAdmin: SignerWithAddress;
 
     const INITIAL_RATE = '3191241046289407268';
     const LAUNCH_DELY = 86400;
 
     beforeEach(async () => {
+        const users = await ethers.getSigners();
+        defaultUser = users[0];
+        ownerAdmin = users[1];
+        parameterAdmin = users[2];
+        emergencyAdmin = users[3];
+
         la = await construcAndWait<LA>('LA');
         votingEscrow = await construcAndWait('VotingEscrow', [la.address])
         veBoostProxy = await construcAndWait('VEBoostProxy', [votingEscrow.address])
         gaugeController = await construcAndWait('GaugeController', [la.address, votingEscrow.address])
         minter = await construcAndWait('Minter', [la.address, gaugeController.address])
         await la.setMinter(minter.address)
+        // set admins
+        await votingEscrow.commitOwnershipAdmin(ownerAdmin.address);
+        await votingEscrow.connect(ownerAdmin).applyOwnershipAdmin();
 
-        const users = await ethers.getSigners();
-        defaultUser = users[0];
+        await gaugeController.commitOwnershipAdmin(ownerAdmin.address);
+        await gaugeController.connect(ownerAdmin).applyOwnershipAdmin();
     })
 
     describe('LA mining', () => {
@@ -152,8 +164,8 @@ describe('DAO', () => {
             await fastForward(LAUNCH_DELY);
             await la.updateMiningParamters();
 
-            await gaugeController.addType('curve_lp', GAUGE_WEIGHTS[0]);
-            await gaugeController.addType('uniswap_lp', GAUGE_WEIGHTS[1]);
+            await gaugeController.connect(ownerAdmin).addType('curve_lp', GAUGE_WEIGHTS[0]);
+            await gaugeController.connect(ownerAdmin).addType('uniswap_lp', GAUGE_WEIGHTS[1]);
         })
 
         async function callClaimableTokens(gauge: LiquidityGauge, user: SignerWithAddress) {
@@ -175,7 +187,7 @@ describe('DAO', () => {
                 gaugeController.address,
                 veBoostProxy.address
             ])
-            await gaugeController.addGauge(gauge.address, type, weight);
+            await gaugeController.connect(ownerAdmin).addGauge(gauge.address, type, weight);
             return { lpToken, gauge }
         }
 
@@ -227,7 +239,7 @@ describe('DAO', () => {
                 expect(weight0).deep.eq(BigNumber.from(E18).mul(2).div(3));
                 expect(weight1).deep.eq(BigNumber.from(E18).div(3));
                 // change weight
-                await gaugeController.changeGaugeWeight(gauge1.address, 2);
+                await gaugeController.connect(ownerAdmin).changeGaugeWeight(gauge1.address, 2);
                 weight0 = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge0.address, timeWeight);
                 weight1 = await gaugeController["gaugeRelativeWeight(address,uint256)"](gauge1.address, timeWeight);
                 expect(weight0).deep.eq(BigNumber.from(E18).div(2));
@@ -283,24 +295,29 @@ describe('DAO', () => {
         let feeManager: FeeManager & Contract;
         let feeDistributor: FeeDistributor & Contract;
         let wnft: MockERC20 & Contract;
-
-        let ownerAdmin: SignerWithAddress,
-            parameterAdmin: SignerWithAddress,
-            emergencyAdmin: SignerWithAddress;
         
         let startTime;
         const COLLECTED_FEE = BigNumber.from(E18);
 
         beforeEach(async () => {
             const users = await ethers.getSigners();
-            ownerAdmin = users[1];
-            parameterAdmin = users[2];
-            emergencyAdmin = users[3];;
 
             startTime = await currentTime();
-            feeDistributor = await construcAndWait('FeeDistributor', [votingEscrow.address, startTime, ownerAdmin.address, emergencyAdmin.address])
-            feeManager = await construcAndWait('FeeManager', [ownerAdmin.address, parameterAdmin.address, emergencyAdmin.address]);
+            feeDistributor = await construcAndWait('FeeDistributor', [votingEscrow.address, startTime])
+            feeManager = await construcAndWait('FeeManager', [ZERO]);
             wnft = await construcAndWait('MockERC20', ['Wrapped NFT', 'WNFT']);
+            // set admin
+            await feeDistributor.commitOwnershipAdmin(ownerAdmin.address);
+            await feeDistributor.commitEmergencyAdmin(emergencyAdmin.address);
+            await feeManager.commitOwnershipAdmin(ownerAdmin.address);
+            await feeManager.commitParameterAdmin(parameterAdmin.address);
+            await feeManager.commitEmergencyAdmin(emergencyAdmin.address);
+
+            await feeDistributor.connect(ownerAdmin).applyOwnershipAdmin();
+            await feeDistributor.connect(emergencyAdmin).applyEmergencyAdmin();
+            await feeManager.connect(ownerAdmin).applyOwnershipAdmin();
+            await feeManager.connect(parameterAdmin).applyParameterAdmin();
+            await feeManager.connect(emergencyAdmin).applyEmergencyAdmin();
             // deploy and set burner
             const weth = await construcAndWait<WBNB>('WBNB');
             const factory = await construcAndWait<MockPoolFactory>('MockPoolFactory', [weth.address]);

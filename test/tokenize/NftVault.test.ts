@@ -212,15 +212,9 @@ describe('NftVault', () => {
 
     describe('Fee manager', () => {
         let feeManager: FeeManager & Contract;
-        let ownerAdmin: SignerWithAddress,
-            parameterAdmin: SignerWithAddress,
-            emergencyAdmin: SignerWithAddress;
 
         beforeEach(async () => {
-            ownerAdmin = users[1];
-            parameterAdmin = users[2];
-            emergencyAdmin = users[3];
-            feeManager = await construcAndWait<FeeManager>('FeeManager', [ownerAdmin.address, parameterAdmin.address, emergencyAdmin.address]);
+            feeManager = await construcAndWait<FeeManager>('FeeManager', [nftVault.address]);
             await nftVault.setFeeManager(feeManager.address);
         })
 
@@ -233,8 +227,8 @@ describe('NftVault', () => {
             beforeEach(async () => {
                 depositor = users[0];
                 // set fee
-                await feeManager.connect(parameterAdmin).setDefaultWrapFee(WRAP_FEE);
-                await feeManager.connect(parameterAdmin).setDefaultUnwrapFee(UNWRAP_FEE);
+                await feeManager.setDefaultWrapFee(WRAP_FEE);
+                await feeManager.setDefaultUnwrapFee(UNWRAP_FEE);
             })
 
             it('Charge wrap & unwrap fee', async () => {

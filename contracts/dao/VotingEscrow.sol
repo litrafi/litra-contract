@@ -1,11 +1,12 @@
 pragma solidity ^0.8.0;
 
 import "../interfaces/IDAO.sol";
+import "./admin/OwnershipAdminManaged.sol";
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract VotingEscrow is ReentrancyGuard {
+contract VotingEscrow is ReentrancyGuard, OwnershipAdminManaged {
     struct Point {
         int128 bias;
         int128 slope;
@@ -25,8 +26,6 @@ contract VotingEscrow is ReentrancyGuard {
         INCREASE_UNLOCK_TIME
     }
 
-    event CommitOwnership(address admin);
-    event ApplyOwnership(address admin);
     event Deposit(
         address indexed provider,
         uint256 value,
@@ -69,11 +68,6 @@ contract VotingEscrow is ReentrancyGuard {
     address public admin;
     address public futureAdmin;
 
-    modifier onlyAdmin {
-        require(msg.sender == admin, '!admin');
-        _;
-    }
-
     modifier onlyEOA {
         bool allowed = false;
         if(msg.sender != tx.origin) {
@@ -89,8 +83,7 @@ contract VotingEscrow is ReentrancyGuard {
 
     constructor(
         address _token
-    ) ReentrancyGuard() {
-        admin = msg.sender;
+    ) ReentrancyGuard() OwnershipAdminManaged(msg.sender) {
         token = _token;
         controller = msg.sender;
         transfersEnabled = true;
@@ -100,21 +93,11 @@ contract VotingEscrow is ReentrancyGuard {
         version = "veLA_1.0.0 ";
     }
 
-    function commitTransferOwnership(address addr) external onlyAdmin {
-        futureAdmin = addr;
-        emit CommitOwnership(addr);
-    }
-
-    function applyTransferOwnership() external onlyAdmin {
-        admin = futureAdmin;
-        emit ApplyOwnership(futureAdmin);
-    }
-
-    function commitSmartWalletChecker(address addr) external onlyAdmin {
+    function commitSmartWalletChecker(address addr) external onlyOwnershipAdmin {
         futureSmartWalletChecker = addr;
     }
 
-    function applySmartWalletChecker() external onlyAdmin {
+    function applySmartWalletChecker() external onlyOwnershipAdmin {
         smartWalletChecker = futureSmartWalletChecker;
     }
 

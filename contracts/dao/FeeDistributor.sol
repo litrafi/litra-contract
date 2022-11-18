@@ -49,16 +49,11 @@ contract FeeDistributor is ReentrancyGuard, EmergencyAdminManaged {
         @notice Contract constructor
         @param _votingEscow VotingEscrow contract address
         @param _startTime Epoch time for fee distribution to start
-        @param _admin Admin address
-        @param _emergencyReturn Address to transfer `_token` balance to
-                                if this contract is killed
      */
     constructor(
         VotingEscrow _votingEscow,
-        uint256 _startTime,
-        address _admin,
-        address payable _emergencyReturn
-    ) OwnershipAdminManaged(_admin) EmergencyAdminManaged(_emergencyReturn) {
+        uint256 _startTime
+    ) OwnershipAdminManaged(msg.sender) EmergencyAdminManaged(msg.sender) {
         _startTime = _startTime / 1 weeks * 1 weeks;
         lastTokenTime = _startTime;
         timeCursor = _startTime;

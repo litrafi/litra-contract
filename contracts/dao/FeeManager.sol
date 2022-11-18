@@ -6,6 +6,7 @@ import "./admin/ParameterAdminManaged.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
+    address public vault;
     uint256 constant public FEE_DENOMINATOR = 1e10;
     mapping(address => address) public burners;
     mapping(address => uint256) public wrapFees;
@@ -13,13 +14,18 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
     uint256 public defaultWrapFee;
     uint256 public defaultUnwrapFee;
 
-    constructor(
-        address _o,
-        address _p,
-        address _e
-    ) OwnershipAdminManaged(_o) ParameterAdminManaged(_p) EmergencyAdminManaged(_o) {}
+    modifier onlyVault {
+        require(msg.sender == vault, "!vault");
+        _;
+    }
 
-    function chargeWrapFee(address _nft, address _wnft, address _resetReceiver) external payable override returns(uint256 reset) {
+    constructor(
+        address _vault
+    ) OwnershipAdminManaged(msg.sender) ParameterAdminManaged(msg.sender) EmergencyAdminManaged(msg.sender) {
+        vault = _vault;
+    }
+
+    function chargeWrapFee(address _nft, address _wnft, address _resetReceiver) external payable override onlyVault returns(uint256 reset) {
         uint256 fee = wrapFees[_wnft];
         if(fee == 0) {
             fee = defaultWrapFee;
@@ -29,7 +35,7 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
         IERC20(_wnft).transfer(_resetReceiver, reset);
     }
 
-    function chargeUnWrapFee(address _wnft, address _operator) external payable override {
+    function chargeUnWrapFee(address _wnft, address _operator) external payable override onlyVault {
         uint256 fee = unwrapFees[_wnft];
         if(fee == 0) {
             fee = defaultUnwrapFee;

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy": "hardhat run ./scripts/synchronise-all.ts"
+    "deploy": "hardhat run ./scripts/deploy-all.ts"
   },
   "repository": {
     "type": "git",

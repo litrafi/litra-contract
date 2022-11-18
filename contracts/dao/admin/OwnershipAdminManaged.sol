@@ -16,4 +16,9 @@ contract OwnershipAdminManaged {
     function commitOwnershipAdmin(address _o) external onlyOwnershipAdmin {
         futureOwnershipAdmin = _o;
     }
+
+    function applyOwnershipAdmin() external {
+        require(msg.sender == futureOwnershipAdmin, "Access denied!");
+        ownershipAdmin = futureOwnershipAdmin;
+    }
 }

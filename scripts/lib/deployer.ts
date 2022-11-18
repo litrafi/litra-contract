@@ -1,68 +1,70 @@
 import { Contract } from 'ethers';
 import { DeployRecorder } from "./deploy-recorder";
 import { ContractNotDeployedError } from '../errors/contract-not-deployed-error';
-import { getContractAt } from './utils';
+import { construcAndWait, getContractAt } from './utils';
 
 export abstract class ContractDeployer<ContractType, DeployArgs> {
-    public contractName: string;
-    public recorderKey: string;
+    protected abstract getContractName(): string;
 
-    constructor() {
-        const {
-            contractName,
-            recorderKey
-        } = this.getDeployerConfig();
-
-        this.contractName = contractName;
-        this.recorderKey = recorderKey || contractName;
+    protected getDeployArgsArr(args: DeployArgs): any[] {
+        return [];
     }
 
-    protected abstract getDeployerConfig(): {
-        contractName: string,
-        recorderKey?: string
-    };
+    protected getRecordKey(): string {
+        return this.getContractName();
+    }
 
-    protected abstract _deploy(args: DeployArgs): Promise<string>;
+    protected async _deploy(args: DeployArgs): Promise<string> {
+        const instance = await construcAndWait<ContractType>(this.getContractName(), this.getDeployArgsArr(args));
+        return instance.address;
+    }
 
     async deploy(args: DeployArgs) {
+        const contractName = this.getContractName();
+        const recordKey = this.getRecordKey();
         const deployRecorder = DeployRecorder.getDeployRecorder();
-        if(deployRecorder.recorder[this.recorderKey]) {
-            console.log(`contract ${this.recorderKey} has been deployed, address: ` + deployRecorder.recorder[this.recorderKey].address)
+        if(deployRecorder.recorder[recordKey]) {
+            console.log(`contract ${recordKey} has been deployed, address: ` + deployRecorder.recorder[recordKey].address)
             return;
         }
         const instanceAddr = await this._deploy(args).catch(err => {
-            console.error(`${this.contractName} deploy failed!`)
+            console.error(`${contractName} deploy failed!`)
             throw err;
         });
         if(instanceAddr) { 
-            console.log(`${this.recorderKey} deploy succeed ! address: ${instanceAddr}`);
-            deployRecorder.setRecord(this.recorderKey, instanceAddr);
+            console.log(`${recordKey} deploy succeed ! address: ${instanceAddr}`);
+            deployRecorder.setRecord(recordKey, instanceAddr);
         }
         deployRecorder.writeRecorder();
     }
 
     getInstance(): Promise<ContractType & Contract> {
         const deployRecorder = DeployRecorder.getDeployRecorder();
-        if(deployRecorder.recorder[this.recorderKey]) {
-            return getContractAt<ContractType>(this.contractName, deployRecorder.recorder[this.recorderKey].address)
+        const recordKey = this.getRecordKey();
+        const contractName = this.getContractName();
+        if(deployRecorder.recorder[recordKey]) {
+            return getContractAt<ContractType>(contractName, deployRecorder.recorder[recordKey].address)
         }
-        throw new ContractNotDeployedError(this.recorderKey);
+        throw new ContractNotDeployedError(recordKey);
     }
 
     async getOrDeployInstance(deployArgs: DeployArgs): Promise<ContractType & Contract> {
         const deployRecoder = DeployRecorder.getDeployRecorder();
-        if(!deployRecoder.recorder[this.recorderKey]) {
+        const recordKey = this.getRecordKey();
+        const contractName = this.getContractName();
+        if(!deployRecoder.recorder[recordKey]) {
             await this.deploy(deployArgs);
             deployRecoder.readRecorder();
         }
-        if(!deployRecoder.recorder[this.recorderKey]) {
-            throw new Error(`getOrDeployInstance 部署失败!recorderKey: ${this.recorderKey}`)
+        if(!deployRecoder.recorder[recordKey]) {
+            throw new Error(`getOrDeployInstance 部署失败!recorderKey: ${recordKey}`)
         }
-        return getContractAt<ContractType>(this.contractName, deployRecoder.recorder[this.recorderKey].address)
+        return getContractAt<ContractType>(contractName, deployRecoder.recorder[recordKey].address)
     }
 
     hasDeployed() {
         const deployRecorder = DeployRecorder.getDeployRecorder();
-        return !!deployRecorder.recorder[this.recorderKey];
+        const recordKey = this.getRecordKey();
+        return !!deployRecorder.recorder[recordKey];
     }
 }

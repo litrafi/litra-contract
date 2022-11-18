@@ -4,13 +4,13 @@ pragma solidity ^0.8.0;
 import "./WrappedNFT.sol";
 import "../utils/NftReceiver.sol";
 import "../interfaces/IFeeManager.sol";
+import "../dao/admin/OwnershipAdminManaged.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract NftVault is Ownable, ReentrancyGuard, NftReceiver {
+contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
     event CreateWrappedNFT(address indexed nft, uint256 wnftId, address wnft);
     event Fungiblize(address indexed creator, uint256 wnftId, uint256 nftId);
     event Redeem(address indexed redeemer, uint256 wnftId, uint256 nftId);
@@ -38,9 +38,9 @@ contract NftVault is Ownable, ReentrancyGuard, NftReceiver {
     mapping(uint256 => EnumerableSet.UintSet) private _nfts;
     address public feeManager;
 
-    constructor() Ownable() ReentrancyGuard() {}
+    constructor() OwnershipAdminManaged(msg.sender) ReentrancyGuard() {}
 
-    function setFeeManager(address _feeManager) external onlyOwner {
+    function setFeeManager(address _feeManager) external onlyOwnershipAdmin {
         feeManager = _feeManager;
     }
 

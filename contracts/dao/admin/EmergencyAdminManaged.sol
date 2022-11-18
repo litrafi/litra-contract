@@ -15,7 +15,12 @@ abstract contract EmergencyAdminManaged is OwnershipAdminManaged {
         _;
     }
 
-    function commitEmergencyAdmin(address _o) external onlyEmergencyAdmin {
-        futureEmergencyAdmin = _o;
+    function commitEmergencyAdmin(address _e) external onlyEmergencyAdmin {
+        futureEmergencyAdmin = _e;
+    }
+
+    function applyEmergencyAdmin() external {
+        require(msg.sender == futureEmergencyAdmin, "! emergency admin");
+        emergencyAdmin = futureEmergencyAdmin;
     }
 }

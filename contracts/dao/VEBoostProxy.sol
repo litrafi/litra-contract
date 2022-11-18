@@ -1,29 +1,18 @@
 pragma solidity ^0.8.0;
 
 import "./VotingEscrow.sol";
+import "./admin/OwnershipAdminManaged.sol";
 import "../interfaces/IDAO.sol";
 
-contract VEBoostProxy {
+contract VEBoostProxy is OwnershipAdminManaged{
     VotingEscrow public ve;
     address public boost;
-    address public admin;
 
-    modifier onlyAdmin {
-        require(msg.sender == admin, "!admin");
-        _;
-    }
-
-    constructor(VotingEscrow _ve) {
+    constructor(VotingEscrow _ve) OwnershipAdminManaged(msg.sender) {
         ve = _ve;
-        admin = msg.sender;
     }
 
-    function transferAdmin(address _newAdmin) external onlyAdmin {
-        require(_newAdmin != address(0), "Invalid new admin");
-        admin = _newAdmin;
-    }
-
-    function setBoost(address _boost) external onlyAdmin {
+    function setBoost(address _boost) external onlyOwnershipAdmin {
         boost = _boost;
     }
 
