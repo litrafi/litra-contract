@@ -5,13 +5,13 @@ import { BigNumber, Contract } from "ethers"
 import { ethers } from "hardhat";
 import { E18, ZERO } from "../../scripts/lib/constant";
 import { construcAndWait } from "../../scripts/lib/utils";
-import { ARCB, FeeDistributor, FeeManager, GaugeController, LiquidityGauge, Minter, MockERC20, MockPoolFactory, SimpleBurner, VEBoostProxy, VotingEscrow, WBNB } from "../../typechain"
+import { LA, FeeDistributor, FeeManager, GaugeController, LiquidityGauge, Minter, MockERC20, MockPoolFactory, SimpleBurner, VEBoostProxy, VotingEscrow, WBNB } from "../../typechain"
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { currentTime, fastForward, fastForwardTo, WEEK, YEAR } from "../mock-util/env.util";
 import { expectCloseTo, shouldThrow } from "../mock-util/expect-plus.util";
 
 describe('DAO', () => {
-    let arcb: ARCB & Contract;
+    let la: LA & Contract;
     let votingEscrow: VotingEscrow & Contract;
     let gaugeController: GaugeController & Contract;
     let minter: Minter & Contract;
@@ -23,25 +23,25 @@ describe('DAO', () => {
     const LAUNCH_DELY = 86400;
 
     beforeEach(async () => {
-        arcb = await construcAndWait<ARCB>('ARCB');
-        votingEscrow = await construcAndWait('VotingEscrow', [arcb.address])
+        la = await construcAndWait<LA>('LA');
+        votingEscrow = await construcAndWait('VotingEscrow', [la.address])
         veBoostProxy = await construcAndWait('VEBoostProxy', [votingEscrow.address])
-        gaugeController = await construcAndWait('GaugeController', [arcb.address, votingEscrow.address])
-        minter = await construcAndWait('Minter', [arcb.address, gaugeController.address])
-        await arcb.setMinter(minter.address)
+        gaugeController = await construcAndWait('GaugeController', [la.address, votingEscrow.address])
+        minter = await construcAndWait('Minter', [la.address, gaugeController.address])
+        await la.setMinter(minter.address)
 
         const users = await ethers.getSigners();
         defaultUser = users[0];
     })
 
-    describe('ARCB mining', () => {
+    describe('LA mining', () => {
         it('Start mining', async () => {
-            let rate = await arcb.rate();
+            let rate = await la.rate();
             expect(rate.eq(0)).true;
-            await shouldThrow(arcb.updateMiningParamters(), 'Not time');
+            await shouldThrow(la.updateMiningParamters(), 'Not time');
             await fastForward(LAUNCH_DELY);
-            await arcb.updateMiningParamters();
-            rate = await arcb.rate();
+            await la.updateMiningParamters();
+            rate = await la.rate();
             expect(rate.eq(INITIAL_RATE)).true
         })
 
@@ -49,37 +49,37 @@ describe('DAO', () => {
             await fastForward(86400);
             let currenRate = BigNumber.from(INITIAL_RATE);
             for (let index = 0; index < 2; index++) {
-                await arcb.updateMiningParamters();
-                const _rate = await arcb.rate();
+                await la.updateMiningParamters();
+                const _rate = await la.rate();
                 expect(_rate.eq(currenRate)).true;
                 
                 await fastForward(31536000)
                 currenRate = currenRate.mul(E18).div('1252000000000000000');
             }
-            await arcb.updateMiningParamters();
+            await la.updateMiningParamters();
         })
     })
 
     describe('VotingEscrow', () => {
-        const ARCB_BALANCE = BigNumber.from(E18).mul(10);
+        const LA_BALANCE = BigNumber.from(E18).mul(10);
         const MAX_LOCK_TIME = 4 * YEAR;
 
         beforeEach(async () => {
-            await arcb.approve(votingEscrow.address, ARCB_BALANCE); 
+            await la.approve(votingEscrow.address, LA_BALANCE); 
         })
 
         describe('Deposit', () => {
             it('Create Lock', async () => {
-                const LOCK_VALUE = ARCB_BALANCE;
+                const LOCK_VALUE = LA_BALANCE;
                 const LOCK_DURATION = YEAR * 3;
                 const now = await currentTime();
                 const UNLOCK_TIME = LOCK_DURATION + now;
                 // deposit
                 const comparator = new BalanceComparator(defaultUser.address);
-                await comparator.setBeforeBalance(arcb.address);
-                await votingEscrow.createLock(ARCB_BALANCE, UNLOCK_TIME);
-                await comparator.setAfterBalance(arcb.address);
-                expect(comparator.compare(arcb.address).eq(LOCK_VALUE)).true;
+                await comparator.setBeforeBalance(la.address);
+                await votingEscrow.createLock(LA_BALANCE, UNLOCK_TIME);
+                await comparator.setAfterBalance(la.address);
+                expect(comparator.compare(la.address).eq(LOCK_VALUE)).true;
                 // check balance
                 let veBalance = await votingEscrow["balanceOf(address)"](defaultUser.address);
                 expectCloseTo(veBalance, LOCK_VALUE.mul(LOCK_DURATION).div(MAX_LOCK_TIME), 2)
@@ -90,15 +90,15 @@ describe('DAO', () => {
                 // Withdraw
                 await shouldThrow(votingEscrow.withdraw(), `The lock didn't expire`);
                 await fastForward(LOCK_DURATION / 2);
-                await comparator.setBeforeBalance(arcb.address);
+                await comparator.setBeforeBalance(la.address);
                 await votingEscrow.withdraw();
-                await comparator.setAfterBalance(arcb.address);
-                expect(comparator.compare(arcb.address).eq(LOCK_VALUE)).true;
+                await comparator.setAfterBalance(la.address);
+                expect(comparator.compare(la.address).eq(LOCK_VALUE)).true;
             })
 
             it('Deposit for', async () => {
-                const ORIGIN_DEPOSIT_AMOUNT = ARCB_BALANCE.div(2);
-                const APPEND_DEPOSIT_AMOUNT = ARCB_BALANCE.div(2);
+                const ORIGIN_DEPOSIT_AMOUNT = LA_BALANCE.div(2);
+                const APPEND_DEPOSIT_AMOUNT = LA_BALANCE.div(2);
                 const LOCK_DURATION = YEAR * 3;
                 const now = await currentTime();
                 const UNLOCK_TIME = LOCK_DURATION + now;
@@ -112,8 +112,8 @@ describe('DAO', () => {
             })
 
             it('Increase deposit amount', async () => {
-                const ORIGIN_DEPOSIT_AMOUNT = ARCB_BALANCE.div(2);
-                const INCREASE_DEPOSIT_AMOUNT = ARCB_BALANCE.div(2);
+                const ORIGIN_DEPOSIT_AMOUNT = LA_BALANCE.div(2);
+                const INCREASE_DEPOSIT_AMOUNT = LA_BALANCE.div(2);
                 const LOCK_DURATION = YEAR * 3;
                 const now = await currentTime();
                 const UNLOCK_TIME = LOCK_DURATION + now;
@@ -127,7 +127,7 @@ describe('DAO', () => {
             })
 
             it('Increase unlock time', async () => {
-                const ORIGIN_DEPOSIT_AMOUNT = ARCB_BALANCE;
+                const ORIGIN_DEPOSIT_AMOUNT = LA_BALANCE;
                 const ORIGIN_LOCK_DURATION = YEAR * 2;
                 const INCREASE_LOCK_DURATION = ORIGIN_LOCK_DURATION * 2;
                 const now = await currentTime();
@@ -150,7 +150,7 @@ describe('DAO', () => {
         beforeEach(async () => {
             // start mining
             await fastForward(LAUNCH_DELY);
-            await arcb.updateMiningParamters();
+            await la.updateMiningParamters();
 
             await gaugeController.addType('curve_lp', GAUGE_WEIGHTS[0]);
             await gaugeController.addType('uniswap_lp', GAUGE_WEIGHTS[1]);
@@ -170,7 +170,7 @@ describe('DAO', () => {
                 lpToken.address,
                 admin,
                 minter.address,
-                arcb.address,
+                la.address,
                 votingEscrow.address,
                 gaugeController.address,
                 veBoostProxy.address
@@ -206,10 +206,10 @@ describe('DAO', () => {
                 expect(weight.eq(0)).true
                 // Get reward
                 const comparator = new BalanceComparator(defaultUser.address);
-                await comparator.setBeforeBalance(arcb.address);
+                await comparator.setBeforeBalance(la.address);
                 await minter.mint(gauge.address);
-                await comparator.setAfterBalance(arcb.address)
-                expect(comparator.compare(arcb.address).eq(rewards)).true;
+                await comparator.setAfterBalance(la.address)
+                expect(comparator.compare(la.address).eq(rewards)).true;
             })
 
             it('Add two gauge with different type', async () => {
@@ -257,13 +257,13 @@ describe('DAO', () => {
                 const GAUGE_TYPE = 0;
                 const { gauge: gauge0 } = await deployGauge(defaultUser.address, GAUGE_TYPE, GAUGE_WEIGHT);
                 const { gauge: gauge1 } = await deployGauge(defaultUser.address, GAUGE_TYPE, GAUGE_WEIGHT);
-                // Get veARCB
-                const DEPOSIT_ARCB_AMOUNT = BigNumber.from(E18);
+                // Get veLA
+                const DEPOSIT_LA_AMOUNT = BigNumber.from(E18);
                 const LOCK_DURATION = YEAR * 2;
                 const now = await currentTime();
                 const UNLOCK_TIME = now + LOCK_DURATION;
-                await arcb.approve(votingEscrow.address, DEPOSIT_ARCB_AMOUNT);
-                await votingEscrow.createLock(DEPOSIT_ARCB_AMOUNT, UNLOCK_TIME);
+                await la.approve(votingEscrow.address, DEPOSIT_LA_AMOUNT);
+                await votingEscrow.createLock(DEPOSIT_LA_AMOUNT, UNLOCK_TIME);
                 // Vote for gauge
                 const USER_WEIGHT = 5000;
                 const timeWeight = await gaugeController.timeWeight(gauge0.address);
@@ -388,13 +388,13 @@ describe('DAO', () => {
                 await feeDistributor.connect(ownerAdmin).checkpointToken();
                 await feeDistributor.connect(ownerAdmin).toggleAllowCheckpointToken();
                 await feeManager.burn(wnft.address);
-                // Get veARCB before checkpoint
-                const DEPOSIT_ARCB_AMOUNT = BigNumber.from(E18);
+                // Get veLA before checkpoint
+                const DEPOSIT_LA_AMOUNT = BigNumber.from(E18);
                 const LOCK_DURATION = YEAR * 2;
                 const now = await currentTime();
                 const UNLOCK_TIME = now + LOCK_DURATION;
-                await arcb.approve(votingEscrow.address, DEPOSIT_ARCB_AMOUNT);
-                await votingEscrow.createLock(DEPOSIT_ARCB_AMOUNT, UNLOCK_TIME);
+                await la.approve(votingEscrow.address, DEPOSIT_LA_AMOUNT);
+                await votingEscrow.createLock(DEPOSIT_LA_AMOUNT, UNLOCK_TIME);
                 // Claim reward
                 // first week
                 // weekCursor = (ts + 1 weeks - 1) / 1 weeks * 1 weeks

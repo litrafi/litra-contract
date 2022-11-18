@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "./ARCB.sol";
+import "./LA.sol";
 import "./VotingEscrow.sol";
 import "../interfaces/IDAO.sol";
 
@@ -32,7 +32,7 @@ contract GaugeController {
     address public admin;
     address public futureAdmin;
 
-    ARCB public token; // ARCB token
+    LA public token; // LA token
     VotingEscrow public votingEscrow;
 
     // Gauge parameters
@@ -92,7 +92,7 @@ contract GaugeController {
         require(_token != address(0), "Invalid token");
         require(_votingEscrow != address(0), "Invalid ve");
 
-        token = ARCB(_token);
+        token = LA(_token);
         votingEscrow = VotingEscrow(_votingEscrow);
         admin = msg.sender;
         timeTotal = block.timestamp / 1 weeks * 1 weeks;

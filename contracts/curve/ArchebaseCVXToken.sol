@@ -49,7 +49,7 @@ contract ArchebaseCVXToken is ERC20 {
         rewards = IRewards(crvRewards);
 
         name_ = string(abi.encodePacked('ArcheBase#', IERC20Metadata(_metaToken).name()));
-        symbol_ = string(abi.encodePacked('ARCB', IERC20Metadata(_metaToken).symbol()));
+        symbol_ = string(abi.encodePacked('LA', IERC20Metadata(_metaToken).symbol()));
     }
 
     function deposit(uint256 amount) external {
@@ -58,7 +58,7 @@ contract ArchebaseCVXToken is ERC20 {
         ERC20(metaToken).transferFrom(msg.sender, address(this), amount);
         ERC20(metaToken).approve(address(booster), amount);
         booster.deposit(boosterPoolId, amount, true);
-        // mint ARCBCRV
+        // mint LACRV
         _mint(msg.sender, amount);
     }
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract ARCB is ERC20 {
+contract LA is ERC20 {
     event UpdateMiningParameters(uint256 rate, uint256 supply);
     event SetMinter(address minter);
     event SetAdmin(address minter);
@@ -28,7 +28,7 @@ contract ARCB is ERC20 {
 
     uint256 private startEpochSupply;
 
-    constructor() ERC20('ArcheBase Token', 'ARCB') {
+    constructor() ERC20('ArcheBase Token', 'LA') {
         uint256 initSupply = INITIAL_SUPPLY;
         _mint(_msgSender(), initSupply);
         admin = _msgSender();

@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "./ARCB.sol";
+import "./LA.sol";
 import "./VotingEscrow.sol";
 import "./VEBoostProxy.sol";
 import "../interfaces/IDAO.sol";
@@ -47,7 +47,7 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
     uint256 constant public WEEK = 604800;
 
     address public minter;
-    ARCB public immutable arcb20;
+    LA public immutable la20;
     VotingEscrow public immutable votingEscrow;
     Controller public immutable gaugeController;
     VEBoostProxy public immutable veBoostProxy;
@@ -111,7 +111,7 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
         address _lpToken,
         address _admin,
         address _minter,
-        ARCB _arcb,
+        LA _la,
         VotingEscrow _votingEscrow,
         Controller _gaugeController,
         VEBoostProxy _veboostProxy
@@ -126,12 +126,12 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
         admin = _admin;
         periodTimestamp[0] = block.timestamp;
         minter = _minter;
-        arcb20 = _arcb;
+        la20 = _la;
         votingEscrow = _votingEscrow;
         gaugeController = _gaugeController;
         veBoostProxy = _veboostProxy;
-        inflationRate = _arcb.rate();
-        futureEpochTime = _arcb.futureEpochTimeWrite();
+        inflationRate = _la.rate();
+        futureEpochTime = _la.futureEpochTimeWrite();
     }
 
     function intergrateCheckpoint() external view returns(uint256) {
@@ -231,8 +231,8 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
         uint256 newRate = rate;
         uint256 prevFutureEpoch = futureEpochTime;
         if(prevFutureEpoch >= _periodTime) {
-            futureEpochTime = arcb20.futureEpochTimeWrite();
-            newRate = arcb20.rate();
+            futureEpochTime = la20.futureEpochTimeWrite();
+            newRate = la20.rate();
             inflationRate = newRate;
         }
 

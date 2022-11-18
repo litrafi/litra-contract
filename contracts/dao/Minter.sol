@@ -6,7 +6,7 @@ import "./GaugeController.sol";
 contract Minter is ReentrancyGuard {
     event Minted(address recipient, address gauge, uint256 minted);
 
-    ARCB public token;
+    LA public token;
     GaugeController public controller;
 
     // user -> gauge -> value
@@ -14,7 +14,7 @@ contract Minter is ReentrancyGuard {
     // minter -> user -> can mint?
     mapping(address => mapping(address => bool)) public allowedToMintFor;
 
-    constructor(ARCB _token, GaugeController _controller) ReentrancyGuard() {
+    constructor(LA _token, GaugeController _controller) ReentrancyGuard() {
         token = _token;
         controller = _controller;
     }

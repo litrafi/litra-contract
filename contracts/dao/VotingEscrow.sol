@@ -95,9 +95,9 @@ contract VotingEscrow is ReentrancyGuard {
         controller = msg.sender;
         transfersEnabled = true;
         decimals = ERC20(_token).decimals();
-        name = "Vote-escrowed ARCB";
-        symbol = "veARCB";
-        version = "veARCB_1.0.0 ";
+        name = "Vote-escrowed LA";
+        symbol = "veLA";
+        version = "veLA_1.0.0 ";
     }
 
     function commitTransferOwnership(address addr) external onlyAdmin {
