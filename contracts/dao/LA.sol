@@ -28,7 +28,7 @@ contract LA is ERC20 {
 
     uint256 private startEpochSupply;
 
-    constructor() ERC20('ArcheBase Token', 'LA') {
+    constructor() ERC20('Litra Token', 'LA') {
         uint256 initSupply = INITIAL_SUPPLY;
         _mint(_msgSender(), initSupply);
         admin = _msgSender();

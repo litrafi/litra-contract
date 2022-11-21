@@ -116,9 +116,9 @@ contract LiquidityGauge is ERC20Permit, ReentrancyGuard {
         Controller _gaugeController,
         VEBoostProxy _veboostProxy
     ) ReentrancyGuard()
-      ERC20Permit(string(abi.encodePacked('ArcheBase.fi', IERC20Metadata(_lpToken).symbol(), " Gauge Deposit")))
+      ERC20Permit(string(abi.encodePacked('Litra.fi', IERC20Metadata(_lpToken).symbol(), " Gauge Deposit")))
       ERC20(
-        string(abi.encodePacked('ArcheBase.fi', IERC20Metadata(_lpToken).symbol(), " Gauge Deposit")),
+        string(abi.encodePacked('Litra.fi', IERC20Metadata(_lpToken).symbol(), " Gauge Deposit")),
         string(abi.encodePacked(IERC20Metadata(_lpToken).symbol(), '-gauge'))
       )
     {

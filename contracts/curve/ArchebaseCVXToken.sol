@@ -48,7 +48,7 @@ contract ArchebaseCVXToken is ERC20 {
         metaToken = _metaToken;
         rewards = IRewards(crvRewards);
 
-        name_ = string(abi.encodePacked('ArcheBase#', IERC20Metadata(_metaToken).name()));
+        name_ = string(abi.encodePacked('Litra#', IERC20Metadata(_metaToken).name()));
         symbol_ = string(abi.encodePacked('LA', IERC20Metadata(_metaToken).symbol()));
     }
 
