@@ -1,54 +1,34 @@
 {
-	"NtokenFactory": {
-		"address": "0xf70Ac6940Cec7aD65432f8dF50a78be64395eF99",
-		"time": "2022-09-24 18:13:26"
-	},
-	"PublicConfig": {
-		"address": "0xfcbA71F600A09D8B138764d62be3e07d249F26D1",
-		"time": "2022-09-24 18:14:03"
-	},
-	"UniswapV3Factory": {
-		"address": "0x7fe11c48e1e6e67ABd2565a754462eFE10cE0837",
-		"time": "2022-09-24 18:14:14"
-	},
-	"SwapRouter": {
-		"address": "0x555c88A781323E398Ae79D17e49d0975028e548f",
-		"time": "2022-09-24 18:14:29"
-	},
-	"NonfungiblePositionManager": {
-		"address": "0x9a90Cb6a9d94F823CB54E91a2B533D7625AfE35D",
-		"time": "2022-09-24 18:14:52"
-	},
-	"Quoter": {
-		"address": "0xCEDD51c6612E212429A5310e678553fC440B9136",
-		"time": "2022-09-24 18:15:19"
-	},
-	"OrderBook": {
-		"address": "0x69122e54937f27337022CFa3a57C2e4766343eCD",
-		"time": "2022-09-24 18:15:36"
-	},
-	"NtokenPricer": {
-		"address": "0xFFbAbC4b447C9dB0931B4338EC08Aa4dd3308871",
-		"time": "2022-09-24 18:16:07"
-	},
 	"NftVault": {
-		"address": "0x52B2a103Cdb378625348a949CDDA301F17462B6B",
-		"time": "2022-09-24 18:16:28"
+		"address": "0xE54b9ad1e767d0770811ce272259bE455fe3fb72",
+		"time": "2022-11-27 18:50:17"
 	},
-	"OptionBook": {
-		"address": "0x74AC376092FEB44164DB953814e24b166836488c",
-		"time": "2022-09-24 18:17:15"
+	"LA": {
+		"address": "0x384a0492CBAADE6411CD14086600295D0f6a8E3e",
+		"time": "2022-11-27 18:50:28"
 	},
-	"LendBook": {
-		"address": "0x11c07D716bd62CD545Ad085294568D65463f0A09",
-		"time": "2022-09-24 18:18:15"
+	"VotingEscrow": {
+		"address": "0x34380Ebf328B252448973440fB646c5eAbE8F2bf",
+		"time": "2022-11-29 12:16:23"
 	},
-	"AuctionBook": {
-		"address": "0xC6090EAF5207Ff0cf02117358A50d7c596430F7f",
-		"time": "2022-09-24 18:18:25"
+	"GaugeController": {
+		"address": "0x96bACdde21b89D54d5a84DEB2a139AFe5ccc3774",
+		"time": "2022-11-29 12:16:34"
 	},
-	"Dashboard": {
-		"address": "0xA48c04355c814054D0CB026d2aEfb7826c2ce233",
-		"time": "2022-09-24 18:18:39"
+	"Minter": {
+		"address": "0x5e8C19077741743Bb2b798E048EeAC8d200017f2",
+		"time": "2022-11-29 12:16:46"
+	},
+	"FeeManager": {
+		"address": "0x5d4f50C05acC0c671D9B9722c447F8Ab9bE61a74",
+		"time": "2022-11-29 12:16:58"
+	},
+	"Voting": {
+		"address": "0xB636da02581FD8cC749e91306410415eFB7d4F55",
+		"time": "2022-11-29 12:20:16"
+	},
+	"VEBoostProxy": {
+		"address": "0x451726BAbB226c92Fa9F939e2D376Ee21cfdFaFc",
+		"time": "2022-11-29 13:37:45"
 	}
 }

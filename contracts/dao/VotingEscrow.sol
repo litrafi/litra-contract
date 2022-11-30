@@ -337,7 +337,7 @@ contract VotingEscrow is ReentrancyGuard, OwnershipAdminManaged {
             if(min >= max) {
                 break;
             }
-            uint256 mid = (max + min) / 2;
+            uint256 mid = (max + min + 1) / 2;
             if(pointHistory[mid].blk <= _block) {
                 min = mid;
             } else {
@@ -419,7 +419,7 @@ contract VotingEscrow is ReentrancyGuard, OwnershipAdminManaged {
             } else {
                 dSlope = slopeChanges[ti];
             }
-            _lastPoint.bias = _lastPoint.slope * int128(uint128(ti - _lastPoint.ts));
+            _lastPoint.bias -= _lastPoint.slope * int128(uint128(ti - _lastPoint.ts));
             if(ti == _t) {
                 break;
             }

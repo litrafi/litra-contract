@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import { DeployRecorder } from "../../scripts/lib/deploy-recorder";
 
+export const MINUTE = 60;
 export const DAY = 3600 * 24;
 export const WEEK = 3600 * 24 * 7; 
 export const YEAR = 3600 * 24 * 365; 

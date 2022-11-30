@@ -17,7 +17,7 @@ export class BalanceComparator {
         if(tokenAddress === ZERO ){
             return getBalance(this.userAddress);
         }
-        const tokenContract = await getContractAt<ERC20>('ERC20', tokenAddress);
+        const tokenContract = await getContractAt<ERC20>('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', tokenAddress);
         return tokenContract.balanceOf(this.userAddress);
     }
 
@@ -26,7 +26,7 @@ export class BalanceComparator {
         if(tokenAddress === ZERO) {
             decimals = 18;
         } else {
-            const tokenContract = await getContractAt<ERC20>('ERC20', tokenAddress);
+            const tokenContract = await getContractAt<ERC20>('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20', tokenAddress);
             decimals = await tokenContract.decimals();
         }
         

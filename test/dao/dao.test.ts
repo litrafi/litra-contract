@@ -3,12 +3,14 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers"
 import { ethers } from "hardhat";
+import { VotingDeployer } from "../../scripts/deployer/dao/voting.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
-import { construcAndWait } from "../../scripts/lib/utils";
-import { LA, FeeDistributor, FeeManager, GaugeController, LiquidityGauge, Minter, MockERC20, MockPoolFactory, SimpleBurner, VEBoostProxy, VotingEscrow, WBNB } from "../../typechain"
+import { construcAndWait, getEventArgument, namehash, pct16 } from "../../scripts/lib/utils";
+import { LA, FeeDistributor, FeeManager, GaugeController, LiquidityGauge, Minter, MockERC20, MockPoolFactory, SimpleBurner, VEBoostProxy, VotingEscrow, WBNB, Voting, ExecutionTarget } from "../../typechain"
 import { BalanceComparator } from "../mock-util/comparator.util";
-import { currentTime, fastForward, fastForwardTo, WEEK, YEAR } from "../mock-util/env.util";
+import { clear, currentTime, fastForward, fastForwardTo, MINUTE, WEEK, YEAR } from "../mock-util/env.util";
 import { expectCloseTo, shouldThrow } from "../mock-util/expect-plus.util";
+import { encodeCallScript } from "./dao.util";
 
 describe('DAO', () => {
     let la: LA & Contract;
@@ -436,6 +438,70 @@ describe('DAO', () => {
                 await comparator.setAfterBalance(ZERO);
                 expectCloseTo(comparator.compare(ZERO), claimable, 2)
             })
+        })
+    })
+
+    describe('Voting', () => {
+        let voting: Voting & Contract;
+        let executionTarget: ExecutionTarget & Contract;
+        const appId = namehash('litra-voting.open.aragonpm.eth')
+        const supportRequiredPct = pct16(50);
+        const minAcceptQuorumPct = pct16(20);
+        const voteTime = 10 * MINUTE;
+        const minTime = 10 * MINUTE;
+        const minBalance = 1;
+        const minBalanceLowerLimit = 1;
+        const minBalanceUpperLimit = 10;
+        const minTimeLowerLimit = 5 * MINUTE;
+        const minTimeUpperLimit = 15 * MINUTE;
+
+        beforeEach(async () => {
+            // Initialization params
+            clear();
+            voting = await new VotingDeployer().getOrDeployInstance({
+                appId,
+                token: votingEscrow.address,
+                supportRequiredPct,
+                minAcceptQuorumPct, 
+                voteTime,
+                minBalance,
+                minTime,
+                minBalanceLowerLimit,
+                minBalanceUpperLimit,
+                minTimeLowerLimit,
+                minTimeUpperLimit
+            })
+            executionTarget = await construcAndWait<ExecutionTarget>('ExecutionTarget')
+        })
+
+        it('create voting', async () => {
+            // Get vote power
+            const DEPOSIT_LA_AMOUNT = BigNumber.from(E18).mul(2);
+            const LOCK_DURATION = YEAR * 4;
+            const now = await currentTime();
+            const UNLOCK_TIME = now + LOCK_DURATION;
+            await la.approve(votingEscrow.address, DEPOSIT_LA_AMOUNT);
+            await votingEscrow.createLock(DEPOSIT_LA_AMOUNT, UNLOCK_TIME);
+            console.log('totalSply', await votingEscrow["totalSupply()"]())
+            // new vote
+            const action = {
+                to: executionTarget.address,
+                data: executionTarget.interface.encodeFunctionData("execute"),
+            };
+            const tx = await voting["newVote(bytes,string)"](
+                encodeCallScript([action]),
+                ""
+            );
+            const voteId = await getEventArgument(
+                voting,
+                tx.hash,
+                "StartVote",
+                "voteId"
+            );
+            // Get vote info
+            const voteInfo = await voting.getVote(voteId);
+            expect(voteInfo.executed).eq(false);
+            expect(voteInfo.open).eq(true);
         })
     })
 })

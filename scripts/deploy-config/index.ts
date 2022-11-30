@@ -1,11 +1,14 @@
 import { network } from "hardhat"
 import { DeployConfig } from "../type";
 import { isTestEnv } from "../network-config";
+import { GOERLI_DEPLOY_CONFIG } from "./goerli.config";
 
 
 const configs: {
     [key in string]: DeployConfig
-} = {}
+} = {
+    goerli: GOERLI_DEPLOY_CONFIG
+}
 
 export function getDeployConfig(): DeployConfig {
     const config = configs[network.name];

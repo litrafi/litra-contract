@@ -1,6 +1,26 @@
 {
 	"NftVault": {
-		"address": "0xcf3977cE21a210D28deecb82A58979799470a815",
-		"time": "2022-10-30 15:26:09"
+		"address": "0xCe02C4583F45Bb72eDc1440693911b4F864c77f7",
+		"time": "2022-11-18 16:14:38"
+	},
+	"LA": {
+		"address": "0x35d9013FCFC9b36013A54e847eD93A52e0B5e6A0",
+		"time": "2022-11-18 16:14:46"
+	},
+	"VotingEscrow": {
+		"address": "0x19a98935a566160444212CcC25b70047F1f82361",
+		"time": "2022-11-18 16:14:54"
+	},
+	"GaugeController": {
+		"address": "0x71305ebdc6eb8b07919748f404D4A140BBBF121f",
+		"time": "2022-11-18 16:15:02"
+	},
+	"Minter": {
+		"address": "0x2A87A82358d55C8BF1B14FaeeDCbfCc1BA0B32D6",
+		"time": "2022-11-18 16:15:10"
+	},
+	"FeeManager": {
+		"address": "0xcCCE3833822699D20b0E6532175D780534D72fd5",
+		"time": "2022-11-18 16:15:21"
 	}
 }

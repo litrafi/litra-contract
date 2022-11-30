@@ -8,6 +8,8 @@ import { BigNumber, Contract, ContractFactory } from "ethers";
 // import { TaskParamWrongError } from "../errors/task-param-wrong-error";
 // eslint-disable-next-line node/no-extraneous-import
 import { TransactionResponse } from '@ethersproject/abstract-provider';
+import { ZERO } from "./constant";
+import { concat, defaultAbiCoder, hexlify, keccak256, nameprep, toUtf8Bytes } from "ethers/lib/utils";
 
 async function tryExecute(func: () => Promise<any>, funcTag: string, tryTimes = 3) {
     while(true) {
@@ -186,4 +188,72 @@ function getRetryContract(originContract: Contract): Contract {
       }
     }
     return retryContract;
+}
+
+export const getEventArgument = async (
+    contract: Contract,
+    txHash: string,
+    eventName: string,
+    eventArg?: string
+  ): Promise<any> => {
+    const filterFn = contract.filters[eventName];
+  
+    if (!filterFn) {
+      throw new Error(`Event ${eventName} not found in contract`);
+    }
+  
+    const filter = filterFn();
+    const events = await contract.queryFilter(filter);
+    // Filter both by tx hash and event signature hash
+    const [event] = events.filter(
+      (event) =>
+        event.transactionHash === txHash && event.topics[0] === filter.topics[0]
+    );
+  
+    if (eventArg) {
+      const argValue = event.args[eventArg];
+  
+      if (!argValue) {
+        throw new Error(`Argument ${eventArg} not found in event ${eventName}`);
+      }
+  
+      return argValue;
+    } else {
+      return event.args;
+    }
+  };
+
+export const toDecimals = (
+    amount: number | string,
+    decimals = 18
+): BigNumber => {
+    const [integer, decimal] = String(amount).split(".");
+    return BigNumber.from(
+        (integer !== "0" ? integer : "") + (decimal || "").padEnd(decimals, "0") ||
+        "0"
+    );
+};
+
+export const pct16 = (x: number | string) => toDecimals(x, 16);
+
+export function namehash(name: string): string {
+    /* istanbul ignore if */
+    if (typeof(name) !== "string") {
+        throw new Error("invalid ENS name; not a string " + name);
+    }
+
+    let current = name;
+    let result: string | Uint8Array = ZERO;
+    while (current.length) {
+        const partition = current.match(/^((.*)\.)?([^.]+)$/);
+        if (partition == null || partition[2] === "") {
+            throw new Error("invalid ENS address; missing component " + name);
+        }
+        const label = toUtf8Bytes(nameprep(partition[3]));
+        result = keccak256(concat([result, keccak256(label)]));
+
+        current = partition[2] || "";
+    }
+
+    return hexlify(result);
 }
