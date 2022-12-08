@@ -1,7 +1,7 @@
 import { BigNumber } from "ethers";
 import { ACL, DAOFactory, EVMScriptRegistryFactory, Kernel, Voting } from "../../../typechain";
 import { ContractDeployer } from "../../lib/deployer";
-import { construcAndWait, getContractAt, getEventArgument, getSelfAddress } from "../../lib/utils";
+import { construcAndWait, executeAndWait, getContractAt, getEventArgument, getSelfAddress } from "../../lib/utils";
 
 type DeployArgs = {
     appId: string,
@@ -37,14 +37,14 @@ export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
         );
         console.log('Voting deployed', votingProxy.address);
         const CREATE_VOTES_ROLE = await votingBase.CREATE_VOTES_ROLE();
-        await acl.createPermission(
+        await executeAndWait(() => acl.createPermission(
             ANY_ENTITY,
             votingProxy.address,
             CREATE_VOTES_ROLE,
             rootAddress
-        );
+        ))
         console.log('Granted voting permission to everybody');
-        await votingProxy.initialize(
+        await executeAndWait(() => votingProxy.initialize(
             args.token,
             args.supportRequiredPct,
             args.minAcceptQuorumPct,
@@ -55,7 +55,7 @@ export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
             args.minBalanceUpperLimit,
             args.minTimeLowerLimit,
             args.minTimeUpperLimit
-        );
+        ));
         console.log('Voting is initialized')
         return votingProxy.address;
     }

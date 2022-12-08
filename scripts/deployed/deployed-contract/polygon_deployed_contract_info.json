@@ -1,26 +1,34 @@
 {
 	"NftVault": {
-		"address": "0xCe02C4583F45Bb72eDc1440693911b4F864c77f7",
-		"time": "2022-11-18 16:14:38"
+		"address": "0x01169665821F1E8147292f25532917cF6e7999F0",
+		"time": "2022-12-07 18:31:59"
 	},
 	"LA": {
-		"address": "0x35d9013FCFC9b36013A54e847eD93A52e0B5e6A0",
-		"time": "2022-11-18 16:14:46"
+		"address": "0x98FdC99802656776E9d9eFdb0Fac36A05FAc1Bff",
+		"time": "2022-12-07 18:32:06"
 	},
 	"VotingEscrow": {
-		"address": "0x19a98935a566160444212CcC25b70047F1f82361",
-		"time": "2022-11-18 16:14:54"
+		"address": "0x42A4dfE1ea7f320a74a7FF5833F0BFCf6909834A",
+		"time": "2022-12-07 18:32:14"
 	},
 	"GaugeController": {
-		"address": "0x71305ebdc6eb8b07919748f404D4A140BBBF121f",
-		"time": "2022-11-18 16:15:02"
+		"address": "0x01e79c8c996C88EFDa70DAfc160C6942bD553145",
+		"time": "2022-12-07 18:32:22"
 	},
 	"Minter": {
-		"address": "0x2A87A82358d55C8BF1B14FaeeDCbfCc1BA0B32D6",
-		"time": "2022-11-18 16:15:10"
+		"address": "0xDf6fddAE1e7941E02ecCe90e932fA23b29088f67",
+		"time": "2022-12-07 18:32:30"
 	},
 	"FeeManager": {
-		"address": "0xcCCE3833822699D20b0E6532175D780534D72fd5",
-		"time": "2022-11-18 16:15:21"
+		"address": "0x579F697d0Ee1b2Fa94A64dB7924ba74FDc8FfEF5",
+		"time": "2022-12-07 18:45:38"
+	},
+	"Voting": {
+		"address": "0xae141b224c1a904FB2bec1b08911858724fe2f86",
+		"time": "2022-12-08 14:09:14"
+	},
+	"VEBoostProxy": {
+		"address": "0xd9099bD3c0dc1d934A801a52FaE5005600d5B524",
+		"time": "2022-12-08 14:09:22"
 	}
 }
