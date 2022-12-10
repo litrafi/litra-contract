@@ -1,6 +1,6 @@
 import { clear, DAY } from "./mock-util/env.util"
-import { deployAll } from "../scripts/deploy-all";
 import { writeTestDeployConfig } from "../scripts/deploy-config";
+import { deployAll } from "../scripts/deployer/litra-deployer";
 
 describe('Deploy all', () => {
     it('run script', async () => {

@@ -12,8 +12,8 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
     event CreateWrappedNFT(address indexed nft, uint256 wnftId, address wnft);
-    event Fungiblize(address indexed creator, uint256 wnftId, uint256 nftId);
-    event Redeem(address indexed redeemer, uint256 wnftId, uint256 nftId);
+    event Wrap(address indexed creator, uint256 wnftId, uint256 nftId);
+    event Unwrap(address indexed redeemer, uint256 wnftId, uint256 nftId);
 
     using EnumerableSet for EnumerableSet.UintSet;
 
@@ -98,7 +98,7 @@ contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
             IFeeManager(feeManager).chargeWrapFee{value: msg.value}(_nftAddr, wnft, msg.sender);
         }
 
-        emit Fungiblize(msg.sender, wnftId, recordId);
+        emit Wrap(msg.sender, wnftId, recordId);
     }
 
     function nftsLength() external view returns(uint256) {
@@ -139,6 +139,6 @@ contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         _nfts[_wnftId].remove(_nftId);
         IERC721(nftInfo.nftAddr).safeTransferFrom(address(this), msg.sender, nftInfo.tokenId);
 
-        emit Redeem(msg.sender, _wnftId, _nftId);
+        emit Unwrap(msg.sender, _wnftId, _nftId);
     }
 }

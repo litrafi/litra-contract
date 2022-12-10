@@ -1,5 +1,5 @@
 import { BigNumber } from "ethers";
-import { ACL, DAOFactory, EVMScriptRegistryFactory, Kernel, Voting } from "../../../typechain";
+import { ACL, DAOFactory, EVMScriptRegistry, EVMScriptRegistryFactory, Kernel, Voting } from "../../../typechain";
 import { ContractDeployer } from "../../lib/deployer";
 import { construcAndWait, executeAndWait, getContractAt, getEventArgument, getSelfAddress } from "../../lib/utils";
 
@@ -18,6 +18,9 @@ type DeployArgs = {
 }
 
 const ANY_ENTITY = "0x" + "f".repeat(40); // 0xffff...ffff
+const KERNEL_APP_ADDR_NAMESPACE = '0xd6f028ca0e8edb4a8c9757ca4fdccab25fa1e0317da1188108f7d2dee14902fb';
+const EVMSCRIPT_REGISTRY_APP_ID = '0xddbcfd564f642ab5627cf68b9b7d374fb4f8a36e941a75d89c87998cef03bd61';
+const REGISTRY_ADD_EXECUTOR_ROLE = '0xc4e90f38eea8c4212a009ca7b8947943ba4d4a58d19b683417f65291d1cd9ed2';
 
 export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
     protected getContractName(): string {
@@ -87,9 +90,20 @@ export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
             APP_MANAGER_ROLE,
             rootAddress
         );
+        // add second executor
+        const registryAddr = await kernel.getApp(KERNEL_APP_ADDR_NAMESPACE, EVMSCRIPT_REGISTRY_APP_ID);
+        await executeAndWait(()=> acl.createPermission(
+            rootAddress,
+            registryAddr,
+            REGISTRY_ADD_EXECUTOR_ROLE,
+            rootAddress
+        ))
+        const callsScript = await construcAndWait('CallsScript');
+        const registry = await getContractAt<EVMScriptRegistry>('EVMScriptRegistry', registryAddr);
+        await executeAndWait(() => registry.addScriptExecutor(callsScript.address));
         
         return [
-            kernel, 
+            kernel,
             acl
         ]
     }
