@@ -5,3 +5,4 @@ import "./get-contract-size";
 import "./verify-default-nft";
 import "./create-test-vote";
 import "./new-gauge";
+import "./distribute-test-coins";
