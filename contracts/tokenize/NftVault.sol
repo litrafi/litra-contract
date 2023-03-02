@@ -36,11 +36,11 @@ contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
     mapping(address => uint256) public wnftIds;
     WrappedNFTInfo[] public wrappedNfts;
     mapping(uint256 => EnumerableSet.UintSet) private _nfts;
-    address public feeManager;
+    IFeeManager public feeManager;
 
     constructor() OwnershipAdminManaged(msg.sender) ReentrancyGuard() {}
 
-    function setFeeManager(address _feeManager) external onlyOwnershipAdmin {
+    function setFeeManager(IFeeManager _feeManager) external onlyOwnershipAdmin {
         feeManager = _feeManager;
     }
 
@@ -91,12 +91,14 @@ contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         // bound FT and NFT
         _nfts[wnftId].add(recordId);
         // mint and charge fee
-        if(feeManager == address(0)) {
-            WrappedNFT(wnft).mint(msg.sender, 1e18);
-        } else {
-            WrappedNFT(wnft).mint(address(feeManager), 1e18);
-            IFeeManager(feeManager).chargeWrapFee{value: msg.value}(_nftAddr, wnft, msg.sender);
+        uint256 fee;
+        if(address(feeManager) != address(0)) {
+            fee = feeManager.wrapFee(wnft);
         }
+        if(fee > 0) {
+            WrappedNFT(wnft).mint(address(feeManager), fee);
+        }
+        WrappedNFT(wnft).mint(msg.sender, 1e18 - fee);
 
         emit Wrap(msg.sender, wnftId, recordId);
     }
@@ -127,12 +129,15 @@ contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         require(_nfts[_wnftId].length() > 0, "No NFT in vault");
         require(_nfts[_wnftId].contains(uint256(_nftId)), "Invalid nftId");
         // burn ft and charge fee
-        if(feeManager == address(0)) {
-            WrappedNFT(ftInfo.wnftAddr).burn(msg.sender, 1e18);
-        } else {
-            IFeeManager(feeManager).chargeUnWrapFee{value: msg.value}(ftInfo.wnftAddr, msg.sender);
-            WrappedNFT(ftInfo.wnftAddr).burn(feeManager, 1e18);
+        uint256 fee;
+        if(address(feeManager) != address(0)) {
+            fee = feeManager.unwrapFee(ftInfo.wnftAddr);
         }
+        if(fee > 0) {
+            WrappedNFT(ftInfo.wnftAddr).transferFrom(msg.sender, address(feeManager), fee);
+        }
+        WrappedNFT(ftInfo.wnftAddr).transferFrom(msg.sender, address(this), 1e18);
+        WrappedNFT(ftInfo.wnftAddr).burn(1e18);
         // return nft
         WrappedNFTInfo memory nftInfo = wrappedNfts[_nftId];
         wrappedNfts[_nftId].inVault = false;

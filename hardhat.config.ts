@@ -5,6 +5,7 @@ import '@openzeppelin/hardhat-upgrades';
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "@nomiclabs/hardhat-vyper";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "./tasks";
@@ -15,6 +16,15 @@ dotenv.config();
 // Go to https://hardhat.org/config/ to learn more
 const accounts = process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [];
 const config: HardhatUserConfig = {
+  vyper: {
+    compilers: [
+      { version: '0.2.15' },
+      { version: '0.2.7' },
+      { version: '0.2.4' },
+      { version: '0.2.8' },
+      { version: '0.3.1' },
+    ]
+  },
   solidity: {
     compilers: [
       {
@@ -58,6 +68,15 @@ const config: HardhatUserConfig = {
             runs: 10000,
           },
         },
+      },
+      {
+        version: "0.6.12",    // Fetch exact version from solc-bin (default: truffle's version)
+        settings: {          // See the solidity docs for advice about optimization and evmVersion
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
       }
     ]
   },
@@ -85,6 +104,10 @@ const config: HardhatUserConfig = {
     polygon: {
       url: 'https://polygon-rpc.com',
       accounts
+    },
+    alpha: {
+      url: 'https://angelbond.io/test-node/',
+      accounts: ['0x9315888774de61ca42bf96e7c721a44243426ed14079dfadef75f5372cf604ca']
     }
   },
   // gasReporter: {

@@ -1,9 +1,11 @@
 import { BigNumber } from "ethers";
-import { ACL, DAOFactory, EVMScriptRegistry, EVMScriptRegistryFactory, Kernel, Voting } from "../../../typechain";
+import { ACL, DAOFactory, EVMScriptRegistryFactory, Kernel, Voting } from "../../../typechain";
 import { ContractDeployer } from "../../lib/deployer";
 import { construcAndWait, executeAndWait, getContractAt, getEventArgument, getSelfAddress } from "../../lib/utils";
+import { KernelDeployer } from "./kernel.deployer";
 
 type DeployArgs = {
+    members: string[],
     appId: string,
     token: string,
     supportRequiredPct: string | BigNumber, 
@@ -17,36 +19,46 @@ type DeployArgs = {
     minTimeUpperLimit: string | number
 }
 
-const ANY_ENTITY = "0x" + "f".repeat(40); // 0xffff...ffff
-const KERNEL_APP_ADDR_NAMESPACE = '0xd6f028ca0e8edb4a8c9757ca4fdccab25fa1e0317da1188108f7d2dee14902fb';
-const EVMSCRIPT_REGISTRY_APP_ID = '0xddbcfd564f642ab5627cf68b9b7d374fb4f8a36e941a75d89c87998cef03bd61';
-const REGISTRY_ADD_EXECUTOR_ROLE = '0xc4e90f38eea8c4212a009ca7b8947943ba4d4a58d19b683417f65291d1cd9ed2';
+export const ANY_ENTITY = "0x" + "f".repeat(40); // 0xffff...ffff
 
 export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
+    private readonly votingType;
+
+    constructor(votingType: string) {
+        super();
+        this.votingType = votingType;
+    }
+
     protected getContractName(): string {
         return 'Voting';
     }
 
+    protected getRecordKey(): string {
+        return 'Voting-' + this.votingType;
+    }
+
     protected async _deploy(args: DeployArgs): Promise<string> {
         const rootAddress = await getSelfAddress();
-        const [dao, acl] = await this.newDao();
-        console.log('Kernel deployed:', dao.address)
-        console.log('ACL deployed:', acl.address)
-        const votingBase = await construcAndWait<Voting>(this.getContractName(), []);
+        const kernel = await new KernelDeployer().getOrDeployInstance({});
+        const aclAddr = await kernel.acl();
+        const acl = await getContractAt<ACL>('ACL', aclAddr);
+        const votingBase = await construcAndWait<Voting>(this.getContractName());
         const votingProxy = await this.installNewApp(
-            dao,
+            kernel,
             args.appId,
             votingBase.address
         );
         console.log('Voting deployed', votingProxy.address);
         const CREATE_VOTES_ROLE = await votingBase.CREATE_VOTES_ROLE();
-        await executeAndWait(() => acl.createPermission(
-            ANY_ENTITY,
-            votingProxy.address,
-            CREATE_VOTES_ROLE,
-            rootAddress
-        ))
-        console.log('Granted voting permission to everybody');
+        for (const member of args.members) {
+            await executeAndWait(() => acl.createPermission(
+                member,
+                votingProxy.address,
+                CREATE_VOTES_ROLE,
+                rootAddress
+            ))
+        }    
+        console.log('Granted voting permission to members');
         await executeAndWait(() => votingProxy.initialize(
             args.token,
             args.supportRequiredPct,
@@ -63,7 +75,7 @@ export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
         return votingProxy.address;
     }
 
-    async newDao(): Promise<[Kernel, ACL]> {
+    async newDao(admin: string): Promise<[Kernel, ACL]> {
         const kernelBase = await construcAndWait<Kernel>('Kernel', [true]);
         const aclBase = await construcAndWait<ACL>('ACL');
         const evmScriptRegistryFactory = await construcAndWait<EVMScriptRegistryFactory>('EVMScriptRegistryFactory');
@@ -72,11 +84,10 @@ export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
             aclBase.address,
             evmScriptRegistryFactory.address
         ]);
-        const rootAddress = await getSelfAddress();
-        const daoReceipt = await (await daoFactory.newDAO(rootAddress)).wait();
+        const daoReceipt = await (await daoFactory.newDAO(admin)).wait();
         const daoAddress = await getEventArgument(
             daoFactory,
-            daoReceipt.transactionHash,
+            daoReceipt,
             "DeployDAO",
             "dao"
         );
@@ -85,22 +96,11 @@ export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
         const APP_MANAGER_ROLE = await kernel.APP_MANAGER_ROLE();
         const acl = await getContractAt<ACL>('ACL', aclAddr);
         await acl.createPermission(
-            rootAddress,
+            admin,
             kernel.address,
             APP_MANAGER_ROLE,
-            rootAddress
+            admin
         );
-        // add second executor
-        const registryAddr = await kernel.getApp(KERNEL_APP_ADDR_NAMESPACE, EVMSCRIPT_REGISTRY_APP_ID);
-        await executeAndWait(()=> acl.createPermission(
-            rootAddress,
-            registryAddr,
-            REGISTRY_ADD_EXECUTOR_ROLE,
-            rootAddress
-        ))
-        const callsScript = await construcAndWait('CallsScript');
-        const registry = await getContractAt<EVMScriptRegistry>('EVMScriptRegistry', registryAddr);
-        await executeAndWait(() => registry.addScriptExecutor(callsScript.address));
         
         return [
             kernel,
@@ -122,7 +122,7 @@ export class VotingDeployer extends ContractDeployer<Voting, DeployArgs> {
         const receipt = await tx.wait();
         const proxyAddress = await getEventArgument(
           dao,
-          receipt.transactionHash,
+          receipt,
           "NewAppProxy",
           "proxy"
         );

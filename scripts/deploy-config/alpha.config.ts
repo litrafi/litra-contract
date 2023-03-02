@@ -1,7 +1,7 @@
 import { DAY } from "../../test/mock-util/env.util";
 import { DeployConfig } from "../type";
 
-export const POLYGON_DEPLOY_CONFIG: DeployConfig = {
+export const ALPHA_DEPLOY_CONFIG: DeployConfig = {
     dao: {
         supportRequiredPct: 50, 
         minAcceptQuorumPct: 20, 

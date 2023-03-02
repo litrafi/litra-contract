@@ -1,34 +1,50 @@
 {
 	"NftVault": {
-		"address": "0x01169665821F1E8147292f25532917cF6e7999F0",
-		"time": "2022-12-07 18:31:59"
+		"address": "0xA891ed7799D555333f908DAC7B3e9e80e8961d5a",
+		"time": "2023-02-07 18:19:40"
 	},
 	"LA": {
-		"address": "0x98FdC99802656776E9d9eFdb0Fac36A05FAc1Bff",
-		"time": "2022-12-07 18:32:06"
+		"address": "0x890E22C25500136f695A0a9a134437f809a06295",
+		"time": "2023-02-07 18:19:48"
 	},
 	"VotingEscrow": {
-		"address": "0x42A4dfE1ea7f320a74a7FF5833F0BFCf6909834A",
-		"time": "2022-12-07 18:32:14"
+		"address": "0x67e6B9852D8295c3Cf48FAA6fCCd1d18EEabE6Ad",
+		"time": "2023-02-07 18:20:00"
+	},
+	"Kernel": {
+		"address": "0x777381CdD8CDc8fBFA8d2ef4274602D81E0842bB",
+		"time": "2023-02-07 20:11:11"
+	},
+	"Voting-Ownership": {
+		"address": "0xf1ae0223fB64d1cDeD1874244801c2fC9C1ae9cE",
+		"time": "2023-02-08 09:44:35"
+	},
+	"Voting-Parameter": {
+		"address": "0xC8dC5a2751304aa218AF5751567E58E8174d65B2",
+		"time": "2023-02-08 10:15:59"
+	},
+	"Voting-EmergencyDAO": {
+		"address": "0x04786C6a244612DF37DBb220E4300f00C7a5df04",
+		"time": "2023-02-08 10:16:54"
 	},
 	"GaugeController": {
-		"address": "0x01e79c8c996C88EFDa70DAfc160C6942bD553145",
-		"time": "2022-12-07 18:32:22"
+		"address": "0x4650F1bdDf0F197dc3E923CCBF84C967a3CD39e2",
+		"time": "2023-02-08 10:17:04"
 	},
 	"Minter": {
-		"address": "0xDf6fddAE1e7941E02ecCe90e932fA23b29088f67",
-		"time": "2022-12-07 18:32:30"
+		"address": "0x5D53c10EeF1F180938a4614EA2433487c512fD60",
+		"time": "2023-02-08 10:17:19"
 	},
 	"FeeManager": {
-		"address": "0x579F697d0Ee1b2Fa94A64dB7924ba74FDc8FfEF5",
-		"time": "2022-12-07 18:45:38"
-	},
-	"Voting": {
-		"address": "0xae141b224c1a904FB2bec1b08911858724fe2f86",
-		"time": "2022-12-08 14:09:14"
+		"address": "0xf3426D7f5635dBf39c2df7c903914ceDD54038C5",
+		"time": "2023-02-08 10:17:27"
 	},
 	"VEBoostProxy": {
-		"address": "0xd9099bD3c0dc1d934A801a52FaE5005600d5B524",
-		"time": "2022-12-08 14:09:22"
+		"address": "0x38Bf36D89534e8007619DBD29681a086Df3A9823",
+		"time": "2023-02-08 10:17:45"
+	},
+	"FeeDistributor": {
+		"address": "0x351402d785323d5FD3DC99d9B0FB40eEAb5E877C",
+		"time": "2023-02-08 10:17:54"
 	}
 }

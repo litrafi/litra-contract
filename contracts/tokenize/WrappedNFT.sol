@@ -17,8 +17,7 @@ contract WrappedNFT is ERC20Permit {
         _mint(_for, _amount);
     }
 
-    function burn(address _account, uint256 _amount) external {
-        require(creator == msg.sender, "!creator");
-        _burn(_account, _amount);
+    function burn(uint256 _amount) external {
+        _burn(msg.sender, _amount);
     }
 }

@@ -3,7 +3,8 @@ import { ContractDeployer } from "../../lib/deployer"
 
 type DeployArgs = {
     token: string,
-    ve: string
+    ve: string,
+    admin: string
 }
 
 export class GaugeControllerDeployer extends ContractDeployer<GaugeController, DeployArgs> {
@@ -12,7 +13,7 @@ export class GaugeControllerDeployer extends ContractDeployer<GaugeController, D
     }
 
     protected getDeployArgsArr(args: DeployArgs): any[] {
-        return [args.token, args.ve];
+        return [args.token, args.ve, args.admin];
     }
     
 }

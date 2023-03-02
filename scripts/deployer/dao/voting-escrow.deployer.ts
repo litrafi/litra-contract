@@ -2,7 +2,8 @@ import { VotingEscrow } from "../../../typechain"
 import { ContractDeployer } from "../../lib/deployer"
 
 type DeployArgs = {
-    token: string
+    token: string,
+    admin: string
 }
 
 export class VotingEscrowDeployer extends ContractDeployer<VotingEscrow, DeployArgs> {
@@ -11,6 +12,6 @@ export class VotingEscrowDeployer extends ContractDeployer<VotingEscrow, DeployA
     }
 
     protected getDeployArgsArr(args: DeployArgs): any[] {
-        return [args.token];
+        return [args.token, args.admin];
     }
 }

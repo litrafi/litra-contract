@@ -7,7 +7,6 @@ describe('Deploy all', () => {
         clear();
         writeTestDeployConfig({
             dao: {
-                appId: 'litra-voting.aragonpm.eth',
                 supportRequiredPct: 50, 
                 minAcceptQuorumPct: 20, 
                 voteTime: 7 * DAY,

@@ -3,7 +3,6 @@ import { DeployConfig } from "../type";
 
 export const GOERLI_DEPLOY_CONFIG: DeployConfig = {
     dao: {
-        appId: 'litra-voting.aragonpm.eth',
         supportRequiredPct: 50, 
         minAcceptQuorumPct: 20, 
         voteTime: 7 * DAY,

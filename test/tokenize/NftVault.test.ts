@@ -212,23 +212,31 @@ describe('NftVault', () => {
 
     describe('Fee manager', () => {
         let feeManager: FeeManager & Contract;
+        let oAdmin: SignerWithAddress;
+        let pAdmin: SignerWithAddress;
+        let eAdmin: SignerWithAddress;
 
         beforeEach(async () => {
-            feeManager = await construcAndWait<FeeManager>('FeeManager', [nftVault.address]);
+            oAdmin = users[0]
+            pAdmin = users[1]
+            eAdmin = users[2]
+
+            feeManager = await construcAndWait<FeeManager>('FeeManager', [
+                nftVault.address,
+                oAdmin.address,
+                pAdmin.address,
+                eAdmin.address
+            ]);
             await nftVault.setFeeManager(feeManager.address);
         })
 
         describe('Charge', () => {
             const WRAP_FEE = 5e8;
             const UNWRAP_FEE = 35e7;
-            const FEE_DENOMINATOR = 1e10;
             let depositor: SignerWithAddress;
 
             beforeEach(async () => {
                 depositor = users[0];
-                // set fee
-                await feeManager.setDefaultWrapFee(WRAP_FEE);
-                await feeManager.setDefaultUnwrapFee(UNWRAP_FEE);
             })
 
             it('Charge wrap & unwrap fee', async () => {
@@ -241,23 +249,31 @@ describe('NftVault', () => {
                 const wnftInfo = await nftVault.wnfts(1);
                 const wnft = await getContractAt<WrappedNFT>('WrappedNFT', wnftInfo.wnftAddr);
                 let wnftBalance = await wnft.balanceOf(depositor.address);
-                let expectBalance = BigNumber.from(E18).mul(BigNumber.from(FEE_DENOMINATOR).sub(WRAP_FEE)).div(1e10);
+                // first wrap without fee
+                let expectBalance = BigNumber.from(E18);
                 expect(wnftBalance).deep.eq(expectBalance);
                 wnftBalance = await wnft.balanceOf(feeManager.address);
-                expectBalance = BigNumber.from(E18).mul(WRAP_FEE).div(FEE_DENOMINATOR);
+                expectBalance = BigNumber.from(0);
                 expect(wnftBalance.eq(expectBalance)).true;
-                // wrap another to get enough fee
+                // set fee
+                await feeManager.connect(pAdmin).setWrapFee(wnft.address, WRAP_FEE);
+                await feeManager.connect(pAdmin).setUnwrapFee(wnft.address, UNWRAP_FEE);
+                // wrap another
                 tokenId = 1;
                 await nftContract.mint(depositor.address);
                 await nftContract.connect(depositor).approve(nftVault.address, tokenId);
-                await nftVault.connect(depositor).wrap(nftContract.address, tokenId);
-                // unwrap
-                const fee = BigNumber.from(E18).mul(UNWRAP_FEE).div(FEE_DENOMINATOR);
                 const userComparator = new BalanceComparator(depositor.address);
+                await userComparator.setBeforeBalance(wnft.address);
+                await nftVault.connect(depositor).wrap(nftContract.address, tokenId);
+                await userComparator.setAfterBalance(wnft.address);
+                expect(userComparator.compare(wnft.address)).deep.eq(BigNumber.from(E18).sub(WRAP_FEE));
+                // unwrap
+                const fee = BigNumber.from(UNWRAP_FEE);
                 const managerComparator = new BalanceComparator(feeManager.address);
+                userComparator.clear();
                 await userComparator.setBeforeBalance(wnft.address);
                 await managerComparator.setBeforeBalance(wnft.address);
-                await wnft.approve(feeManager.address, fee.add(E18));
+                await wnft.approve(nftVault.address, fee.add(E18));
                 await nftVault.unwrap(1, 0);
                 await userComparator.setAfterBalance(wnft.address);
                 await managerComparator.setAfterBalance(wnft.address);

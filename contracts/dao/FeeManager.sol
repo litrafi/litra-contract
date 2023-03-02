@@ -1,3 +1,5 @@
+pragma solidity ^0.8.0;
+
 import "./admin/Stoppable.sol";
 import "../interfaces/IBurner.sol";
 import "../interfaces/IFeeManager.sol";
@@ -6,13 +8,15 @@ import "./admin/ParameterAdminManaged.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
+    struct Fee {
+        bool initialized;
+        uint256 value;
+    }
+
     address public vault;
-    uint256 constant public FEE_DENOMINATOR = 1e10;
     mapping(address => address) public burners;
-    mapping(address => uint256) public wrapFees;
-    mapping(address => uint256) public unwrapFees;
-    uint256 public defaultWrapFee;
-    uint256 public defaultUnwrapFee;
+    mapping(address => Fee) public _wrapFee;
+    mapping(address => Fee) public _unwrapFee;
 
     modifier onlyVault {
         require(msg.sender == vault, "!vault");
@@ -20,28 +24,12 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
     }
 
     constructor(
-        address _vault
-    ) OwnershipAdminManaged(msg.sender) ParameterAdminManaged(msg.sender) EmergencyAdminManaged(msg.sender) {
+        address _vault,
+        address _oAdmin,
+        address _pAdmin,
+        address _eAdmin
+    ) OwnershipAdminManaged(_oAdmin) ParameterAdminManaged(_pAdmin) EmergencyAdminManaged(_eAdmin) {
         vault = _vault;
-    }
-
-    function chargeWrapFee(address _nft, address _wnft, address _resetReceiver) external payable override onlyVault returns(uint256 reset) {
-        uint256 fee = wrapFees[_wnft];
-        if(fee == 0) {
-            fee = defaultWrapFee;
-        }
-        uint256 b = IERC20(_wnft).balanceOf(address(this));
-        reset = b * (FEE_DENOMINATOR - fee) / FEE_DENOMINATOR;
-        IERC20(_wnft).transfer(_resetReceiver, reset);
-    }
-
-    function chargeUnWrapFee(address _wnft, address _operator) external payable override onlyVault {
-        uint256 fee = unwrapFees[_wnft];
-        if(fee == 0) {
-            fee = defaultUnwrapFee;
-        }
-        uint256 total = fee * 1e18 / FEE_DENOMINATOR + 1e18;
-        IERC20(_wnft).transferFrom(_operator, address(this), total);
     }
 
     function _setBurner(address _wnft, address _burner) internal {
@@ -53,6 +41,14 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
             IERC20(_wnft).approve(_burner, type(uint256).max);
         }
         burners[_wnft] = _burner;
+    }
+
+    function wrapFee(address _ft) external override view returns(uint256) {
+        return _wrapFee[_ft].value;
+    }
+
+    function unwrapFee(address _ft) external override view returns(uint256) {
+        return _unwrapFee[_ft].value;
     }
 
     function setBurner(address _wnft, address _burner) external onlyOwnershipAdmin {
@@ -80,19 +76,15 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
         }
     }
 
-    function setDefaultWrapFee(uint256 _wrapFee) external onlyParameterAdmin {
-        defaultWrapFee = _wrapFee;
+    function setWrapFee(address _wnft, uint256 _fee) external {
+        Fee memory fee = _wrapFee[_wnft];
+        require(!fee.initialized || msg.sender == parameterAdmin, "! parameter admin");
+        _wrapFee[_wnft] = Fee(true, _fee);
     }
 
-    function setDefaultUnwrapFee(uint256 _unwrapFee) external onlyParameterAdmin {
-        defaultUnwrapFee = _unwrapFee;
-    }
-
-    function setWrapFee(address _wnft, uint256 _fee) external onlyParameterAdmin {
-        wrapFees[_wnft] = _fee;
-    }
-
-    function setUnwrapFee(address _wnft, uint256 _fee) external onlyParameterAdmin {
-        unwrapFees[_wnft] = _fee;
+    function setUnwrapFee(address _wnft, uint256 _fee) external {
+        Fee memory fee = _unwrapFee[_wnft];
+        require(!fee.initialized || msg.sender == parameterAdmin, "! parameter admin");
+        _unwrapFee[_wnft] = Fee(true, _fee);
     }
 }

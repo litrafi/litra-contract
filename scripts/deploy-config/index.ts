@@ -3,13 +3,15 @@ import { DeployConfig } from "../type";
 import { isTestEnv } from "../network-config";
 import { GOERLI_DEPLOY_CONFIG } from "./goerli.config";
 import { POLYGON_DEPLOY_CONFIG } from "./polygon.config";
+import { ALPHA_DEPLOY_CONFIG } from "./alpha.config";
 
 
 const configs: {
     [key in string]: DeployConfig
 } = {
     goerli: GOERLI_DEPLOY_CONFIG,
-    polygon: POLYGON_DEPLOY_CONFIG
+    polygon: POLYGON_DEPLOY_CONFIG,
+    alpha: ALPHA_DEPLOY_CONFIG
 }
 
 export function getDeployConfig(): DeployConfig {

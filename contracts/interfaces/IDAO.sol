@@ -23,3 +23,7 @@ interface IMinter {
     function controller() external view returns(address); 
     function minted(address user, address gauge) external view returns(uint256);
 }
+
+interface IFeeDistributor {
+    function burn() external payable returns(bool);
+}

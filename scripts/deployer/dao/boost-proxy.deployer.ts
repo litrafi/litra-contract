@@ -2,7 +2,10 @@ import { VEBoostProxy } from "../../../typechain"
 import { ContractDeployer } from "../../lib/deployer"
 
 type DeployArgs = {
-    ve: string
+    ve: string,
+    ownershipAdmin: string,
+    emergencyAdmin: string,
+    delegation: string
 }
 
 export class BoostProxyDeployer extends ContractDeployer<VEBoostProxy, DeployArgs> {
@@ -11,7 +14,7 @@ export class BoostProxyDeployer extends ContractDeployer<VEBoostProxy, DeployArg
     }
 
     protected getDeployArgsArr(args: DeployArgs): any[] {
-        return [args.ve];
+        return [args.ve, args.ownershipAdmin, args.emergencyAdmin, args.delegation];
     }
     
 }

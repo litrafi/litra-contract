@@ -1,7 +1,7 @@
 import moment from "moment";
 import { types } from "util";
 import { ethers, upgrades } from "hardhat";
-import { BigNumber, Contract, ContractFactory } from "ethers";
+import { BigNumber, Contract, ContractFactory, ContractReceipt } from "ethers";
 // import BigNumberjs from "bignumber.js";
 // import { DeployRecorder } from "./deploy-recorder";
 // import { getNetworkConfig } from "../network-config";
@@ -192,7 +192,10 @@ function getRetryContract(originContract: Contract): Contract {
 
 export const getEventArgument = async (
     contract: Contract,
-    txHash: string,
+    receipt: {
+        transactionHash: string,
+        blockNumber: number,
+    },
     eventName: string,
     eventArg?: string
   ): Promise<any> => {
@@ -203,7 +206,10 @@ export const getEventArgument = async (
     }
   
     const filter = filterFn();
-    let events = await contract.queryFilter(filter);
+    let events = await contract.queryFilter(filter, receipt.blockNumber, receipt.blockNumber).catch(err => {
+        console.error(err);
+        throw err;
+    });
     for (let index = 0; index < 10; index++) {
         if(events.length !== 0) {
             break;
@@ -211,12 +217,12 @@ export const getEventArgument = async (
         await new Promise((resolve, reject) => {
             setTimeout(resolve, 10 * 1000)
         })
-        events = await contract.queryFilter(filter);
+        events = await contract.queryFilter(filter, receipt.blockNumber, receipt.blockNumber);
     }
     // Filter both by tx hash and event signature hash
     const [event] = events.filter(
       (event) =>
-        event.transactionHash === txHash && event.topics[0] === filter.topics[0]
+        event.transactionHash === receipt.transactionHash && event.topics[0] === filter.topics[0]
     );
   
     if (eventArg) {

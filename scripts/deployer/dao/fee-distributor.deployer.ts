@@ -3,7 +3,9 @@ import { ContractDeployer } from "../../lib/deployer"
 
 type DeployArgs = {
     ve: string,
-    starTime: number
+    starTime: number,
+    ownershipAdmin: string,
+    emergencyAdmin: string
 }
 
 export class FeeDistributorDeployer extends ContractDeployer<FeeDistributor, DeployArgs> {
@@ -12,6 +14,6 @@ export class FeeDistributorDeployer extends ContractDeployer<FeeDistributor, Dep
     }
 
     protected getDeployArgsArr(args: DeployArgs): any[] {
-        return [args.ve, args.starTime];
+        return [args.ve, args.starTime, args.ownershipAdmin, args.emergencyAdmin];
     }
 }

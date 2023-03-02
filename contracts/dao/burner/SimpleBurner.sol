@@ -3,18 +3,19 @@ pragma solidity ^0.8.0;
 import "../../interfaces/ICurve.sol";
 import "../../interfaces/IBurner.sol";
 import "../admin/Stoppable.sol";
+import "../../interfaces/IDAO.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract SimpleBurner is Stoppable, IBurner {
-    address payable public receiver;
+    IFeeDistributor public receiver;
     address public weth;
     address public poolFactory;
 
     constructor(
         address _o,
         address _e,
-        address payable  _receiver,
+        IFeeDistributor _receiver,
         address _weth,
         address _poolFactory
     ) OwnershipAdminManaged(_o) EmergencyAdminManaged(_e) {
@@ -22,6 +23,8 @@ contract SimpleBurner is Stoppable, IBurner {
         weth = _weth;
         poolFactory = _poolFactory;
     }
+
+    receive() external payable {}
 
     function burn(address _wnft) external override onlyNotStopped {
         uint256 inAmount = IERC20(_wnft).balanceOf(msg.sender);
@@ -41,6 +44,8 @@ contract SimpleBurner is Stoppable, IBurner {
         }
         // swap for eth
         IERC20(_wnft).approve(poolAddr, inAmount);
-        pool.exchange(i, j, inAmount, 0, true, receiver);
+        pool.exchange(i, j, inAmount, 0, true, payable(this));
+        uint256 balance = address(this).balance;
+        receiver.burn{value: balance}();
     }
 }

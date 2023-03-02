@@ -1,6 +1,5 @@
 export declare type DeployConfig = {
     dao: {
-        appId: string,
         supportRequiredPct: number, 
         minAcceptQuorumPct: number, 
         voteTime: number,

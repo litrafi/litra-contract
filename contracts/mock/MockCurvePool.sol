@@ -1,7 +1,7 @@
 pragma solidity ^0.8.0;
 
 import "../interfaces/ICurve.sol";
-import "./WBNB.sol";
+import "./WETH.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -20,7 +20,7 @@ contract MockCurvePool is ICurvePool {
         address tokenIn = coins[i];
         address tokenOut = coins[j];
         if(tokenIn == weth) {
-            WBNB(weth).deposit{value: msg.value}();
+            WETH(weth).deposit{value: msg.value}();
         } else {
             IERC20(tokenIn).transferFrom(msg.sender, address(this), dx);
         }

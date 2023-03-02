@@ -1,0 +1,50 @@
+{
+	"NftVault": {
+		"address": "0xa20131F6dfbC3d06f282449251C55880dE6D797f",
+		"time": "2023-02-17 14:20:22"
+	},
+	"LA": {
+		"address": "0xeC33beaEf30920d836140e1b3C339043C852F537",
+		"time": "2023-02-17 15:22:42"
+	},
+	"VotingEscrow": {
+		"address": "0x68C5DD74afC6a92E0524255a9c2881DE08eE354d",
+		"time": "2023-02-17 15:22:43"
+	},
+	"Kernel": {
+		"address": "0x9F88eEcbe9863940Dd81f065ECC440dFAF099caE",
+		"time": "2023-02-17 15:22:53"
+	},
+	"Voting-Ownership": {
+		"address": "0x03caEDBB8DFe029FD2622B57d71C03A23088b629",
+		"time": "2023-02-17 15:23:00"
+	},
+	"Voting-Parameter": {
+		"address": "0xc1FD3CAf0A036419b8B226a56214E5a60875d4Db",
+		"time": "2023-02-17 15:23:08"
+	},
+	"Voting-EmergencyDAO": {
+		"address": "0x030B9A07bA774e39D09B80B6a4552f75f4E1b97B",
+		"time": "2023-02-17 15:23:15"
+	},
+	"GaugeController": {
+		"address": "0xCf27b4aCbeA003aB1fb3665b426Afa37949397e6",
+		"time": "2023-02-17 15:23:16"
+	},
+	"Minter": {
+		"address": "0x736dA174C538B9c6ce68d8681bD78818BA3a2F4e",
+		"time": "2023-02-17 15:23:17"
+	},
+	"FeeManager": {
+		"address": "0x88C9C99fB4E7B6369b7B7fe34445E4DDD9016aA3",
+		"time": "2023-02-17 15:23:18"
+	},
+	"VEBoostProxy": {
+		"address": "0xAf54B6B9700558406cC74d972fAaEb5f7D35CD0a",
+		"time": "2023-02-17 15:23:20"
+	},
+	"FeeDistributor": {
+		"address": "0xD7Ea9955CC585ad1A68bC7f15667Cd838A96c451",
+		"time": "2023-02-17 15:23:21"
+	}
+}
