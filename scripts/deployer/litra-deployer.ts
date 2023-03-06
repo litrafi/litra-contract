@@ -7,7 +7,7 @@ import { LADeployer } from "../deployer/dao/la.deployer";
 import { MinterDeployer } from "../deployer/dao/minter.deployer";
 import { VotingEscrowDeployer } from "../deployer/dao/voting-escrow.deployer";
 import { ANY_ENTITY, VotingDeployer } from "../deployer/dao/voting.deployer";
-import { NftVaultDeployer } from "../deployer/tokenize/nft-vault.deployer";
+import { NFTVaultDeployer } from "../deployer/tokenize/nft-vault.deployer";
 import { ZERO } from "../lib/constant";
 import { getSelfAddress, namehash, toDecimals } from "../lib/utils";
 import { DeployConfig } from "../type";
@@ -15,7 +15,7 @@ import { FeeDistributorDeployer } from "./dao/fee-distributor.deployer";
 
 export async function deployAll() {
     const self = await getSelfAddress();
-    const vault = await new NftVaultDeployer().getOrDeployInstance({});
+    const vault = await new NFTVaultDeployer().getOrDeployInstance({});
     const la = await new LADeployer().getOrDeployInstance({});
     const ve = await new VotingEscrowDeployer().getOrDeployInstance({ token: la.address, admin: self });
     const { dao } = getDeployConfig();

@@ -26,6 +26,9 @@ contract SimpleBurner is Stoppable, IBurner {
 
     receive() external payable {}
 
+    /**
+        @notice burn the wnft and transfer eth to FeeDistributor contract
+     */
     function burn(address _wnft) external override onlyNotStopped {
         uint256 inAmount = IERC20(_wnft).balanceOf(msg.sender);
         IERC20(_wnft).transferFrom(msg.sender, address(this), inAmount);

@@ -3,22 +3,22 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers"
 import { ethers } from "hardhat";
-import { NftVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
+import { NFTVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
 import { construcAndWait, getContractAt } from "../../scripts/lib/utils";
-import { FeeManager, WrappedNFT, Nft, NftVault } from "../../typechain"
+import { FeeManager, WrappedNFT, Nft, NFTVault } from "../../typechain"
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { clear } from "../mock-util/env.util";
 
-describe('NftVault', () => {
-    let nftVault: NftVault & Contract;
+describe('NFTVault', () => {
+    let nftVault: NFTVault & Contract;
     let nftContracts: Array<Contract & Nft>;
     let users: SignerWithAddress[];
 
     beforeEach(async () => {
         clear();
 
-        nftVault = await new NftVaultDeployer().getOrDeployInstance({});
+        nftVault = await new NFTVaultDeployer().getOrDeployInstance({});
         const bayc = await construcAndWait<Nft>('Nft', ['BoredApeYachtClub', 'BAYC ', '']);
         const cryptoPunks = await construcAndWait<Nft>('Nft', ['CRYPTOPUNKS', 'C', '']) ;
         nftContracts = [bayc, cryptoPunks];

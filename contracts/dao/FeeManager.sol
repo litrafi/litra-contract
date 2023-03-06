@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./admin/Stoppable.sol";
@@ -32,6 +33,9 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
         vault = _vault;
     }
 
+    /**
+        @notice Set burner for specified WNFT, approve max allowance for burner
+     */
     function _setBurner(address _wnft, address _burner) internal {
         address oldBurner = burners[_wnft];
         if(oldBurner != address(0)) {
@@ -43,12 +47,20 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
         burners[_wnft] = _burner;
     }
 
-    function wrapFee(address _ft) external override view returns(uint256) {
-        return _wrapFee[_ft].value;
+    /**
+        @notice Get fee for wrapping
+        @param _wnft address of wnft.The fee of each WNFT can be different.
+     */
+    function wrapFee(address _wnft) external override view returns(uint256) {
+        return _wrapFee[_wnft].value;
     }
 
-    function unwrapFee(address _ft) external override view returns(uint256) {
-        return _unwrapFee[_ft].value;
+    /**
+        @notice Get fee for unwrapping
+        @param _wnft address of wnft.The fee of each WNFT can be different.
+     */
+    function unwrapFee(address _wnft) external override view returns(uint256) {
+        return _unwrapFee[_wnft].value;
     }
 
     function setBurner(address _wnft, address _burner) external onlyOwnershipAdmin {
@@ -58,7 +70,7 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
     function setManyBurners(address[] memory _wnfts, address[] memory _burners) external onlyOwnershipAdmin {
         require(_wnfts.length == _burners.length, "Unequal arr length");
         for (uint256 index = 0; index < _wnfts.length; index++) {
-            burners[_wnfts[index]] = _burners[index];
+            _setBurner(_wnfts[index], _burners[index]);
         }
     }
 
@@ -76,12 +88,22 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
         }
     }
 
+    /**
+        @notice Set fee for wrapping.
+        Anyone can make the first setting,but generally the first maker will be creator of wnft.
+        After first setting, only parameter admin can change
+     */
     function setWrapFee(address _wnft, uint256 _fee) external {
         Fee memory fee = _wrapFee[_wnft];
         require(!fee.initialized || msg.sender == parameterAdmin, "! parameter admin");
         _wrapFee[_wnft] = Fee(true, _fee);
     }
 
+    /**
+        @notice Set fee for unwrapping.
+        Anyone can make the first setting,but generally the first maker will be creator of wnft.
+        After first setting, only parameter admin can change
+     */
     function setUnwrapFee(address _wnft, uint256 _fee) external {
         Fee memory fee = _unwrapFee[_wnft];
         require(!fee.initialized || msg.sender == parameterAdmin, "! parameter admin");

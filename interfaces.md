@@ -2,7 +2,7 @@
 
 ## Explore
 
-### NftVault
+### NFTVault
 
 #### 根据筛选条件获取TNFT列表
 - 函数定义: function getTNFTListByFilter(
@@ -20,7 +20,7 @@
 - 返回: nft id，使用nftInfo查询详情
 ## Tokenize
 
-### NftVault
+### NFTVault
 
 #### 存入nft,并tokenize
 
@@ -528,7 +528,7 @@ struct Bid {
 
 ## 用户门户
 
-### NftVault
+### NFTVault
 
 #### 获取用户NFT价值总额
 - 函数定义: function getUserCollectionValue(address user) external view returns(uint256 totalBalance)
@@ -537,7 +537,7 @@ struct Bid {
 
 #### 获取我的TNFT列表
 - 函数定义: function getDepositedNftList(address account) external view returns(uint256[] memory)
-- 注：函数返回TNFT id数组，id传入NftVault.nftInfo接口获取TNFT详细数据
+- 注：函数返回TNFT id数组，id传入NFTVault.nftInfo接口获取TNFT详细数据
 
 ### OptionBook
 

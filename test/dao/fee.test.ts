@@ -5,7 +5,7 @@ import { BigNumber, Contract } from "ethers"
 import { ethers } from "hardhat";
 import { E18, ZERO } from "../../scripts/lib/constant";
 import { construcAndWait } from "../../scripts/lib/utils";
-import { FeeDistributor, FeeManager, MockERC20, MockPoolFactory, SimpleBurner, WBNB } from "../../typechain"
+import { FeeDistributor, FeeManager, MockERC20, MockPoolFactory, SimpleBurner, WETH } from "../../typechain"
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { getNowRoughly } from "../mock-util/env.util";
 import { shouldThrow } from "../mock-util/expect-plus.util";
@@ -46,7 +46,7 @@ describe('Fee', () => {
         ]);
         wnft = await construcAndWait('MockERC20', ['Wrapped NFT', 'WNFT']);
         // deploy and set burner
-        const weth = await construcAndWait<WBNB>('WBNB');
+        const weth = await construcAndWait<WETH>('WETH');
         const factory = await construcAndWait<MockPoolFactory>('MockPoolFactory', [weth.address]);
         await factory.deployPool(wnft.address, weth.address);
         const poolAddr = await factory.find_pool_for_coins(wnft.address, weth.address);

@@ -4,7 +4,7 @@ import { E18, ZERO } from "../../scripts/lib/constant";
 import { construcAndWait, getContractAt, getSelfAddress } from "../../scripts/lib/utils";
 import { setNetworkConfig } from "../../scripts/network-config";
 import { CommonNetworkConfig, DeployConfig } from "../../scripts/type";
-import { MockDataFeed, MockERC20, Nft, NftVault, Ntoken, WBNB } from "../../typechain";
+import { MockDataFeed, MockERC20, Nft, NFTVault, Ntoken, WETH } from "../../typechain";
 
 export async function deployMockNft(owner: string) {
     const nft = await construcAndWait<Nft>('Nft', ['Nft', 'NFT', 'NFT.uri']);
@@ -13,7 +13,7 @@ export async function deployMockNft(owner: string) {
 }
 
 export async function deployMockWETH() {
-    const weth = await construcAndWait<WBNB>('WBNB');
+    const weth = await construcAndWait<WETH>('WETH');
     return weth;
 }
 
@@ -22,7 +22,7 @@ export async function deployERC20Token(tokenName: string) {
     return token;
 }
 
-export async function deployMockNtoken(vault: NftVault & Contract) {
+export async function deployMockNtoken(vault: NFTVault & Contract) {
     const self = await getSelfAddress();
     const nft = await deployMockNft(self);
     const SUPPLY = BigNumber.from(E18).mul(2);

@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
+contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
     event CreateWrappedNFT(address indexed nft, uint256 wnftId, address wnft);
     event Wrap(address indexed creator, uint256 wnftId, uint256 nftId);
     event Unwrap(address indexed redeemer, uint256 wnftId, uint256 nftId);
@@ -44,6 +44,11 @@ contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         feeManager = _feeManager;
     }
 
+    /**
+        @notice Wrap a NFT(IERC721) into a ERC20 token.
+        @param _nftAddr address of NFT contract
+        @param _tokenId token id of the NFT
+     */
     function wrap (
         address _nftAddr,
         uint256 _tokenId
@@ -107,6 +112,10 @@ contract NftVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         return wrappedNfts.length;
     }
 
+    /**
+        @notice Get all NFTs in a series
+        @param _wnftId id of WrappedNFT
+     */
     function nftsInWnft(uint256 _wnftId) external view returns(uint256[] memory) {
         uint256 arrLength = _nfts[_wnftId].length();
         uint256[] memory nfts = new uint256[](arrLength);
