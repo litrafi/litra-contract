@@ -32,8 +32,10 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
 
     mapping(uint256 => WNFTInfo) public wnfts;
     uint256 public nextWnftId = 1;
-    // [nftAdd/ftAddr] => ftId
+    // nft addr => wnftId
     mapping(address => uint256) public wnftIds;
+    // wnft addr => wnftId
+    mapping(address => uint256) public wnftAddrToId;
     WrappedNFTInfo[] public wrappedNfts;
     mapping(uint256 => EnumerableSet.UintSet) private _nfts;
     IFeeManager public feeManager;
@@ -87,14 +89,14 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
             // storage
             wnfts[wnftId] = WNFTInfo(_nftAddr, wnft);
             wnftIds[_nftAddr] = wnftId;
-            wnftIds[wnft] = wnftId;
+            wnftAddrToId[wnft] = wnftId;
             
             emit CreateWrappedNFT(_nftAddr, wnftId, wnft);
         } else {
             wnft = wnfts[wnftId].wnftAddr;
         }
         // bound FT and NFT
-        _nfts[wnftId].add(recordId);
+        require(_nfts[wnftId].add(recordId));
         // mint and charge fee
         uint256 fee;
         if(address(feeManager) != address(0)) {
@@ -150,7 +152,7 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         // return nft
         WrappedNFTInfo memory nftInfo = wrappedNfts[_nftId];
         wrappedNfts[_nftId].inVault = false;
-        _nfts[_wnftId].remove(_nftId);
+        require(_nfts[_wnftId].remove(_nftId));
         IERC721(nftInfo.nftAddr).safeTransferFrom(address(this), msg.sender, nftInfo.tokenId);
 
         emit Unwrap(msg.sender, _wnftId, _nftId);

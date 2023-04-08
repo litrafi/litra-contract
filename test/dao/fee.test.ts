@@ -88,12 +88,13 @@ describe('Fee', () => {
             const WNFT_ADDR = ZERO;
             
             expect(defaultUser.address).not.eq(parameterAdmin.address);
+            await feeManager.connect(ownerAdmin).setFeeInitiator(defaultUser.address);
             // init value
             await feeManager.setWrapFee(WNFT_ADDR, FEE);
-            await shouldThrow(feeManager.setWrapFee(WNFT_ADDR, FEE), '! parameter admin') ;
+            await shouldThrow(feeManager.setWrapFee(WNFT_ADDR, FEE), 'Not admin or initiator') ;
             // init value
             await feeManager.setUnwrapFee(WNFT_ADDR, FEE);
-            await shouldThrow(feeManager.setUnwrapFee(WNFT_ADDR, FEE), '! parameter admin') ;
+            await shouldThrow(feeManager.setUnwrapFee(WNFT_ADDR, FEE), 'Not admin or initiator') ;
         })
     })
 

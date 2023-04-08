@@ -49,7 +49,7 @@ describe('NFTVault', () => {
             const ftInfo = await nftVault.wnfts(1);
             expect(ftInfo.nftAddr).eq(nftContract.address);
             expect(ftInfo.wnftAddr).not.eq(ZERO);
-            ftId = await nftVault.wnftIds(ftInfo.wnftAddr);
+            ftId = await nftVault.wnftAddrToId(ftInfo.wnftAddr);
             expect(ftId).eq(BigNumber.from(1));
             const nftsLength = await nftVault.nftsLength();
             expect(nftsLength).eq(1);
@@ -86,7 +86,7 @@ describe('NFTVault', () => {
             const ftInfo = await nftVault.wnfts(1);
             expect(ftInfo.nftAddr).eq(nftContract.address);
             expect(ftInfo.wnftAddr).not.eq(ZERO);
-            ftId = await nftVault.wnftIds(ftInfo.wnftAddr);
+            ftId = await nftVault.wnftAddrToId(ftInfo.wnftAddr);
             expect(ftId).eq(BigNumber.from(1));
             const nftsLength = await nftVault.nftsLength();
             expect(nftsLength).eq(2);

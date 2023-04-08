@@ -9,12 +9,16 @@ import "./admin/ParameterAdminManaged.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
+    event SetWrapFee(address _wnft, uint256 prevFee, uint256 newFee);
+    event SetUnwrapFee(address _wnft, uint256 prevFee, uint256 newFee);
+
     struct Fee {
         bool initialized;
         uint256 value;
     }
 
-    address public vault;
+    address public immutable vault;
+    address public feeInitiator;
     mapping(address => address) public burners;
     mapping(address => Fee) public _wrapFee;
     mapping(address => Fee) public _unwrapFee;
@@ -31,6 +35,10 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
         address _eAdmin
     ) OwnershipAdminManaged(_oAdmin) ParameterAdminManaged(_pAdmin) EmergencyAdminManaged(_eAdmin) {
         vault = _vault;
+    }
+
+    function setFeeInitiator(address _feeInitiator) external onlyOwnershipAdmin {
+        feeInitiator = _feeInitiator;
     }
 
     /**
@@ -93,10 +101,15 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
         Anyone can make the first setting,but generally the first maker will be creator of wnft.
         After first setting, only parameter admin can change
      */
-    function setWrapFee(address _wnft, uint256 _fee) external {
+    function setWrapFee(address _wnft, uint256 _fee) external override {
         Fee memory fee = _wrapFee[_wnft];
-        require(!fee.initialized || msg.sender == parameterAdmin, "! parameter admin");
+        require(
+            (!fee.initialized && msg.sender == feeInitiator) 
+                || msg.sender == parameterAdmin,
+            "Not admin or initiator"
+        );
         _wrapFee[_wnft] = Fee(true, _fee);
+        emit SetWrapFee(_wnft, fee.value, _fee);
     }
 
     /**
@@ -104,9 +117,14 @@ contract FeeManager is IFeeManager, Stoppable, ParameterAdminManaged {
         Anyone can make the first setting,but generally the first maker will be creator of wnft.
         After first setting, only parameter admin can change
      */
-    function setUnwrapFee(address _wnft, uint256 _fee) external {
+    function setUnwrapFee(address _wnft, uint256 _fee) external override {
         Fee memory fee = _unwrapFee[_wnft];
-        require(!fee.initialized || msg.sender == parameterAdmin, "! parameter admin");
+        require(
+            (!fee.initialized && msg.sender == feeInitiator) 
+                || msg.sender == parameterAdmin,
+            "Not admin or initiator"
+        );
         _unwrapFee[_wnft] = Fee(true, _fee);
+        emit SetUnwrapFee(_wnft, fee.value, _fee);
     }
 }
