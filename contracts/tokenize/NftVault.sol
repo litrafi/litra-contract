@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./WrappedNFT.sol";
 import "../utils/NftReceiver.sol";
+import "../interfaces/IStrategy.sol";
 import "../interfaces/IFeeManager.sol";
 import "../dao/admin/OwnershipAdminManaged.sol";
 
@@ -39,11 +40,23 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
     WrappedNFTInfo[] public wrappedNfts;
     mapping(uint256 => EnumerableSet.UintSet) private _nfts;
     IFeeManager public feeManager;
+    // NFT address => strategy address
+    mapping(address => address) public strategies;
 
     constructor() OwnershipAdminManaged(msg.sender) ReentrancyGuard() {}
 
     function setFeeManager(IFeeManager _feeManager) external onlyOwnershipAdmin {
         feeManager = _feeManager;
+    }
+
+    function setStrategy(address _nft, address _strategy) external onlyOwnershipAdmin {
+        address strategy = strategies[_nft];
+        if(strategy != address(0)) {
+            IERC721(_nft).setApprovalForAll(strategy, false);
+            IStrategy(strategy).kill();
+        }
+        IERC721(_nft).setApprovalForAll(_strategy, true);
+        strategies[_nft] = _strategy;
     }
 
     /**
@@ -152,8 +165,14 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         // return nft
         WrappedNFTInfo memory nftInfo = wrappedNfts[_nftId];
         wrappedNfts[_nftId].inVault = false;
-        require(_nfts[_wnftId].remove(_nftId));
-        IERC721(nftInfo.nftAddr).safeTransferFrom(address(this), msg.sender, nftInfo.tokenId);
+        _nfts[_wnftId].remove(_nftId);
+        if(IERC721(nftInfo.nftAddr).ownerOf(nftInfo.tokenId) == address(this)) {
+            IERC721(nftInfo.nftAddr).safeTransferFrom(address(this), msg.sender, nftInfo.tokenId);
+        } else {
+            address strategy = strategies[nftInfo.nftAddr];
+            require(IERC721(nftInfo.nftAddr).ownerOf(nftInfo.tokenId) == strategy, "Not in vault");
+            IStrategy(strategy).redeem(nftInfo.nftAddr, nftInfo.tokenId, msg.sender);
+        }
 
         emit Unwrap(msg.sender, _wnftId, _nftId);
     }
