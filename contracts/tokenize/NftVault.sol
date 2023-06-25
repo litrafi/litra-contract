@@ -47,7 +47,7 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         feeManager = _feeManager;
     }
 
-    function setStaker(address _nft, address _strategy) external onlyOwnershipAdmin {
+    function setStrategy(address _nft, address _strategy) external onlyOwnershipAdmin {
         address strategy = strategies[_nft];
         if(strategy != address(0)) {
             IERC721(_nft).setApprovalForAll(strategy, false);
