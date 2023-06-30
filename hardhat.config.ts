@@ -97,6 +97,10 @@ const config: HardhatUserConfig = {
       url: "https://goerli.infura.io/v3/e15030b2cb93458ea41651c02afee982",
       accounts
     },
+    sepolia: {
+      url: 'https://rpc.sepolia.org',
+      accounts
+    },
     bnbTestnet: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
       accounts

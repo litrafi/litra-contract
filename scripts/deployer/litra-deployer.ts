@@ -22,7 +22,6 @@ export async function deployAll() {
     const oVoting = await deployDAO('Ownership', 'Voting-Ownership', dao, ve.address, [ANY_ENTITY]);
     const pVoting = await deployDAO('Parameter', 'Voting-Parameter', dao, ve.address, [ANY_ENTITY]);
     const eVoting = await deployDAO('EmergencyDAO', 'Voting-Emergency', dao, ve.address, [self]);
-
     const gaugeController = await new GaugeControllerDeployer().getOrDeployInstance({
         token: la.address,
         ve: ve.address,
