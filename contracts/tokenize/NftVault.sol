@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
     event CreateWrappedNFT(address indexed nft, uint256 wnftId, address wnft);
-    event Wrap(address indexed creator, uint256 wnftId, uint256 nftId);
+    event Wrap(address indexed creator, uint256 wnftId, uint256 nftId, uint256 receivedAmount);
     event Unwrap(address indexed redeemer, uint256 wnftId, uint256 nftId);
 
     using EnumerableSet for EnumerableSet.UintSet;
@@ -67,14 +67,13 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
     function wrap (
         address _nftAddr,
         uint256 _tokenId
-    ) external payable nonReentrant {
+    ) external payable nonReentrant returns(address wnft){
         IERC721(_nftAddr).transferFrom(msg.sender, address(this), _tokenId);
         // Save nft record
         uint256 recordId = wrappedNfts.length;
         wrappedNfts.push(WrappedNFTInfo(_nftAddr, _tokenId, true));
         // Get FT Info
         uint256 wnftId = wnftIds[_nftAddr];
-        address wnft;
         if(wnftId == 0) {
             // Create a new FT
             string memory wnftName;
@@ -118,9 +117,10 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
         if(fee > 0) {
             WrappedNFT(wnft).mint(address(feeManager), fee);
         }
-        WrappedNFT(wnft).mint(msg.sender, 1e18 - fee);
+        uint256 receivedAmount = 1e18 - fee;
+        WrappedNFT(wnft).mint(msg.sender, receivedAmount);
 
-        emit Wrap(msg.sender, wnftId, recordId);
+        emit Wrap(msg.sender, wnftId, recordId, receivedAmount);
     }
 
     function nftsLength() external view returns(uint256) {

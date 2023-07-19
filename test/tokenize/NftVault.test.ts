@@ -5,8 +5,8 @@ import { BigNumber, Contract } from "ethers"
 import { ethers } from "hardhat";
 import { NFTVaultDeployer } from "../../scripts/deployer/tokenize/nft-vault.deployer";
 import { E18, ZERO } from "../../scripts/lib/constant";
-import { construcAndWait, getContractAt } from "../../scripts/lib/utils";
-import { FeeManager, WrappedNFT, Nft, NFTVault } from "../../typechain"
+import { construcAndWait, deployAndWait, getContractAt } from "../../scripts/lib/utils";
+import { FeeManager, WrappedNFT, Nft, NFTVault, BatchProxy, IERC20 } from "../../typechain"
 import { BalanceComparator } from "../mock-util/comparator.util";
 import { clear } from "../mock-util/env.util";
 
@@ -280,6 +280,41 @@ describe('NFTVault', () => {
                 expect(userComparator.compare(wnft.address).eq(BigNumber.from(E18).add(fee))).true;
                 expect(managerComparator.compare(wnft.address).eq(fee)).true;
             })
+        })
+    })
+
+    describe('Batch Proxy', () => {
+        let batchProxy: BatchProxy & Contract;
+        let defaultUser: SignerWithAddress;
+
+        beforeEach(async () => {
+            batchProxy = await construcAndWait<BatchProxy>('BatchProxy', [nftVault.address]);
+            defaultUser = users[0];
+        })
+
+        it('batch wrap', async () => {
+            const NFTS_LENGTH = 5;
+            const nfts: string[] = [];
+            const tokenIds: number[] = [];
+
+            for (let index = 0; index < NFTS_LENGTH; index++) {
+                const nft = await construcAndWait<Nft>('Nft', ['Mock NFT', 'MNFT', '']);
+                await nft.mint(defaultUser.address)
+                await nft.approve(batchProxy.address, 0);
+                nfts.push(nft.address);
+                tokenIds.push(0);
+            }
+
+            await batchProxy.batchWrap(nfts, tokenIds);
+
+            // confirm
+            for (let index = 0; index < nfts.length; index++) {
+                const wnftId = await nftVault.wnftIds(nfts[index]);
+                const wnftInfo = await nftVault.wnfts(wnftId);
+                const wnft = await getContractAt<IERC20>('IERC20', wnftInfo.wnftAddr);
+                const balance = await wnft.balanceOf(defaultUser.address);
+                expect(balance.toString()).eq(E18)
+            }
         })
     })
 })
