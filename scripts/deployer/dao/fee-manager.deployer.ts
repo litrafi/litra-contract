@@ -1,5 +1,6 @@
-import { FeeManager } from "../../../typechain"
+import { FeeManager, NFTVault } from "../../../typechain"
 import { ContractDeployer } from "../../lib/deployer"
+import { construcAndWait, getContractAt } from "../../lib/utils";
 
 type DeployArgs = {
     vault: string,
@@ -20,5 +21,18 @@ export class FeeManagerDeployer extends ContractDeployer<FeeManager, DeployArgs>
             args.pAdmin,
             args.eAdmin
         ];
+    }
+
+    protected async _deploy(args: DeployArgs): Promise<string> {
+        const feeManager = await construcAndWait<FeeManager>('FeeManager', [
+            args.vault,
+            args.oAdmin,
+            args.pAdmin,
+            args.eAdmin
+        ])
+        const vaultContract = await getContractAt<NFTVault>('NFTVault', args.vault);
+        await vaultContract.setFeeManager(feeManager.address);
+
+        return feeManager.address;
     }
 }

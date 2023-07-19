@@ -12,6 +12,7 @@ import { ZERO } from "../lib/constant";
 import { getSelfAddress, namehash, toDecimals } from "../lib/utils";
 import { DeployConfig } from "../type";
 import { FeeDistributorDeployer } from "./dao/fee-distributor.deployer";
+import { BatchProxyDeployer } from "./tokenize/batch-proxy.deployer";
 
 export async function deployAll() {
     const self = await getSelfAddress();
@@ -28,13 +29,12 @@ export async function deployAll() {
         admin: oVoting.address
     });
     await new MinterDeployer().deploy({ token: la.address, controller: gaugeController.address });
-    const feeManager = await new FeeManagerDeployer().getOrDeployInstance({
+    await new FeeManagerDeployer().getOrDeployInstance({
         vault: vault.address,
         oAdmin: oVoting.address,
         pAdmin: pVoting.address,
         eAdmin: eVoting.address
     });
-    await vault.setFeeManager(feeManager.address);
     // deploy voting
     await new BoostProxyDeployer().getOrDeployInstance({
         ve: ve.address,
@@ -48,6 +48,12 @@ export async function deployAll() {
         ownershipAdmin: oVoting.address,
         emergencyAdmin: eVoting.address
     })
+    // deploy batch proxy
+    console.log(1)
+    await new BatchProxyDeployer().getOrDeployInstance({
+        vault: vault.address
+    });
+    console.log(2)
 }
 
 async function deployDAO(
