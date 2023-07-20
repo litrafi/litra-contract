@@ -98,7 +98,7 @@ const config: HardhatUserConfig = {
       accounts
     },
     sepolia: {
-      url: 'https://rpc.sepolia.org',
+      url: 'https://sepolia.infura.io/v3/e15030b2cb93458ea41651c02afee982',
       accounts
     },
     bnbTestnet: {
