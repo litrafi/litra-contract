@@ -67,13 +67,14 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
     function wrap (
         address _nftAddr,
         uint256 _tokenId
-    ) external payable nonReentrant returns(address wnft){
+    ) external payable nonReentrant {
         IERC721(_nftAddr).transferFrom(msg.sender, address(this), _tokenId);
         // Save nft record
         uint256 recordId = wrappedNfts.length;
         wrappedNfts.push(WrappedNFTInfo(_nftAddr, _tokenId, true));
         // Get FT Info
         uint256 wnftId = wnftIds[_nftAddr];
+        address wnft;
         if(wnftId == 0) {
             // Create a new FT
             string memory wnftName;

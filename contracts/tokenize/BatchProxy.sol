@@ -25,7 +25,9 @@ contract BatchProxy {
             require(nft != address(0), "invalid nft address");
             IERC721(nft).transferFrom(msg.sender, address(this), tokenId);
             IERC721(nft).approve(address(vault), tokenId);
-            address wnft = vault.wrap(nft, tokenId);
+            vault.wrap(nft, tokenId);
+            uint256 wnftId = vault.wnftIds(nft);
+            (, address wnft) = vault.wnfts(wnftId);
             IERC20(wnft).transfer(msg.sender, IERC20(wnft).balanceOf(address(this)));
         }
     }
