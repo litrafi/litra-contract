@@ -12,3 +12,8 @@ Litra is creating sufficient NFT liquidity using advanced bonding curves and veT
 ```shell
 npm i
 ```
+
+### Running the Tests
+```shell
+npx hardhat test
+```
