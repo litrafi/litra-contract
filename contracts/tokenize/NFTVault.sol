@@ -149,8 +149,8 @@ contract NFTVault is ReentrancyGuard, NftReceiver, OwnershipAdminManaged {
      */
     function unwrap(uint256 _wnftId, uint256 _nftId) external payable nonReentrant {
         WNFTInfo memory ftInfo = wnfts[_wnftId];
-        require(ftInfo.nftAddr != address(0), "Invalid FT");
-        require(WrappedNFT(ftInfo.wnftAddr).balanceOf(msg.sender) >= 1e18, "Insufficient ft");
+        require(ftInfo.nftAddr != address(0), "Invalid wNFT");
+        require(WrappedNFT(ftInfo.wnftAddr).balanceOf(msg.sender) >= 1e18, "Insufficient wNFT");
         require(_nfts[_wnftId].length() > 0, "No NFT in vault");
         require(_nfts[_wnftId].contains(uint256(_nftId)), "Invalid nftId");
         // burn ft and charge fee
