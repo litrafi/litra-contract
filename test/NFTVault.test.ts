@@ -122,7 +122,7 @@ describe('NFTVault', () => {
             const {nftVault, redeemer, wnftId, nftId, wnft} = await deployAndWrapOne();
             await wnft.connect(redeemer).approve(nftVault.getAddress(), ethers.parseEther('1'));
             await expect(nftVault.connect(redeemer).unwrap(wnftId, nftId))
-                .to.be.revertedWith('Insufficient wnft');
+                .to.be.revertedWith('Insufficient wNFT');
         })
     })
 
