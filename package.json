@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run ./scripts/executable/deploy-all.ts"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "@types/dotenv": "^8.2.0",
