@@ -18,4 +18,9 @@ export async function mockCurve() {
 
     console.log('Pool Deployer: ', poolDeployer.address)
     console.log('WETH: ', weth.address)
+
+    return {
+        poolDeployer,
+        weth
+    }
 }

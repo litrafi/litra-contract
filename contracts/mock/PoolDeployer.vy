@@ -148,6 +148,21 @@ def __init__(
 # <--- Pool Deployers --->
 
 @external
+@view
+def deploy_pool_test(
+    _coins: address[2]
+) -> uint256: 
+    decimals: uint256[2] = empty(uint256[2])
+    for i in range(2):
+        d: uint256 = ERC20(_coins[i]).decimals()
+        assert d < 19, "Max 18 decimals for coins"
+        decimals[i] = d
+    precisions: uint256 = (18 - decimals[0]) + shift(18 - decimals[1], 8)
+
+    return precisions
+
+
+@external
 def deploy_pool(
     _name: String[32],
     _symbol: String[10],
