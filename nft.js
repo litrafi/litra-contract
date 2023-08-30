@@ -1,3 +1,4 @@
 module.exports = [
-    'Archebase Test Nfts', 'ATN', 'https://archebase.com/metadata/'
+    'Litra NFT test Wrapped NFT',
+    'LNtwnft'
 ]
