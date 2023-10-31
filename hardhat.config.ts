@@ -123,7 +123,8 @@ const config: HardhatUserConfig = {
       rinkeby: process.env.ETHERSCAN_API_KEY,
       ropsten: process.env.ETHERSCAN_API_KEY,
       sepolia: process.env.ETHERSCAN_API_KEY,
-      polygon: process.env.POLYGON_API_KEY
+      polygon: process.env.POLYGON_API_KEY,
+      goerli: ''
     }
   },
 };

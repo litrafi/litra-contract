@@ -1,34 +1,10 @@
 {
 	"NFTVault": {
-		"address": "0xE54b9ad1e767d0770811ce272259bE455fe3fb72",
-		"time": "2022-11-27 18:50:17"
+		"address": "0xcaa1B5964Dcbd1416ecb9E0bd55F9b87E8C099f3",
+		"time": "2023-10-31 15:37:17"
 	},
-	"LA": {
-		"address": "0x384a0492CBAADE6411CD14086600295D0f6a8E3e",
-		"time": "2022-11-27 18:50:28"
-	},
-	"VotingEscrow": {
-		"address": "0x34380Ebf328B252448973440fB646c5eAbE8F2bf",
-		"time": "2022-11-29 12:16:23"
-	},
-	"GaugeController": {
-		"address": "0x96bACdde21b89D54d5a84DEB2a139AFe5ccc3774",
-		"time": "2022-11-29 12:16:34"
-	},
-	"Minter": {
-		"address": "0x5e8C19077741743Bb2b798E048EeAC8d200017f2",
-		"time": "2022-11-29 12:16:46"
-	},
-	"FeeManager": {
-		"address": "0x5d4f50C05acC0c671D9B9722c447F8Ab9bE61a74",
-		"time": "2022-11-29 12:16:58"
-	},
-	"Voting": {
-		"address": "0xB636da02581FD8cC749e91306410415eFB7d4F55",
-		"time": "2022-11-29 12:20:16"
-	},
-	"VEBoostProxy": {
-		"address": "0x451726BAbB226c92Fa9F939e2D376Ee21cfdFaFc",
-		"time": "2022-11-29 13:37:45"
+	"BatchProxy": {
+		"address": "0xBde954E4CFC3D6f3ED502f7A32a07AF24992E2B7",
+		"time": "2023-10-31 15:37:40"
 	}
 }
