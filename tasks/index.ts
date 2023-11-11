@@ -7,3 +7,5 @@ import "./verify-default-nft";
 import "./create-test-vote";
 import "./new-gauge";
 import "./distribute-test-coins";
+import "./set-wrap-fee";
+import "./set-unwrap-fee";

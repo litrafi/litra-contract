@@ -6,5 +6,9 @@
 	"BatchProxy": {
 		"address": "0xBde954E4CFC3D6f3ED502f7A32a07AF24992E2B7",
 		"time": "2023-10-31 15:37:40"
+	},
+	"FeeManager": {
+		"address": "0xc1c1f0260d60Fb9d6B641a639A101A62Aba5d457",
+		"time": "2023-11-11 12:17:21"
 	}
 }
