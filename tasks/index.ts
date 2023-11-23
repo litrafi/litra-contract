@@ -1,7 +1,7 @@
 import "./craw";
 import "./upgrade-contract.task";
 import "./mint-test-nft";
-import "./launch-default-nft";
+import "./launch-lnbt";
 import "./get-contract-size";
 import "./verify-default-nft";
 import "./create-test-vote";
