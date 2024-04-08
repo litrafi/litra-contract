@@ -112,6 +112,10 @@ const config: HardhatUserConfig = {
     alpha: {
       url: 'https://angelbond.io/test-node/',
       accounts: ['0x9315888774de61ca42bf96e7c721a44243426ed14079dfadef75f5372cf604ca']
+    },
+    base: {
+      url: 'https://base.llamarpc.com',
+      accounts
     }
   },
   // gasReporter: {
