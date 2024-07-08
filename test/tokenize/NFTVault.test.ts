@@ -1,9 +1,8 @@
 import { expect } from "chai";
-import { Contract } from "ethers"
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deployAll } from "../scripts/deploy-all";
+import { deployAll } from "../../scripts/deploy-all";
 import { ethers } from "hardhat";
-import { WrappedNFT } from "../typechain-types";
+import { WrappedNFT } from "../../typechain-types";
 
 describe('NFTVault', () => {
     describe('Fungiblize', () => {
@@ -16,7 +15,7 @@ describe('NFTVault', () => {
 
             const tokenIds = [0, 1];
             await Promise.all(tokenIds.map(async tokenId => {
-                await nftContract.mint(depositor.address, tokenId);
+                await nftContract.mint(depositor, tokenId);
                 await nftContract.connect(depositor).approve(nftVault.getAddress(), tokenId);
                 await nftVault.connect(depositor).wrap(nftContract.getAddress(), tokenId);
             }))
@@ -52,7 +51,7 @@ describe('NFTVault', () => {
             const depositor = (await ethers.getSigners())[0];
 
             await Promise.all(nftContracts.map(async nftContract => {
-                await nftContract.mint(depositor.address, tokenId);
+                await nftContract.mint(depositor, tokenId);
                 await nftContract.connect(depositor).approve(nftVault.getAddress(), tokenId);
                 await nftVault.connect(depositor).wrap(nftContract.getAddress(), tokenId);
             }));
@@ -78,7 +77,7 @@ describe('NFTVault', () => {
                 expect(await wnft.name()).eq(`${nftName} Wrapped NFT`);
                 expect(await wnft.symbol()).eq(`${nftSymbol}wnft`);
                 expect(await wnft.totalSupply()).eq(ethers.parseEther('1'));
-                expect(await wnft.balanceOf(depositor.address)).eq(ethers.parseEther('1'));
+                expect(await wnft.balanceOf(depositor)).eq(ethers.parseEther('1'));
             }
         })
     })
@@ -91,7 +90,7 @@ describe('NFTVault', () => {
             const [depositor, redeemer] = await ethers.getSigners();
             const tokenId = 0;
 
-            await nftContract.mint(depositor.address, tokenId);
+            await nftContract.mint(depositor, tokenId);
             await nftContract.connect(depositor).approve(nftVault.getAddress(), tokenId);
             await nftVault.connect(depositor).wrap(nftContract.getAddress(), tokenId);
 
@@ -107,10 +106,10 @@ describe('NFTVault', () => {
         
         it('Unwrap succeed', async () => {
             const {nftVault, nftContract, depositor, redeemer, wnftId, nftId, wnft} = await deployAndWrapOne();
-            await wnft.connect(depositor).transfer(redeemer.address, ethers.parseEther('1'));
+            await wnft.connect(depositor).transfer(redeemer, ethers.parseEther('1'));
             await wnft.connect(redeemer).approve(nftVault.getAddress(), ethers.parseEther('1'));
             await nftVault.connect(redeemer).unwrap(wnftId, nftId);
-            const balance = await wnft.balanceOf(redeemer.address);
+            const balance = await wnft.balanceOf(redeemer);
             expect(balance).eq(0);
 
             const nftInfo = await nftVault.wrappedNfts(nftId);
@@ -137,7 +136,7 @@ describe('NFTVault', () => {
 
             for (let index = 0; index < NFTS_LENGTH; index++) {
                 const nft = await MockNFT.deploy('Mock NFT', 'MNFT');
-                await nft.mint(depositor.address, index)
+                await nft.mint(depositor, index)
                 await nft.connect(depositor).approve(batchProxy.getAddress(), index);
                 nfts.push(await nft.getAddress());
                 tokenIds.push(index);
@@ -151,7 +150,7 @@ describe('NFTVault', () => {
                 const wnftInfo = await nftVault.wnfts(wnftId);
                 const WrappedNFT = await ethers.getContractFactory('WrappedNFT');
                 const wnft: WrappedNFT = <any>await WrappedNFT.attach(wnftInfo.wnftAddr);
-                const balance = await wnft.balanceOf(depositor.address);
+                const balance = await wnft.balanceOf(depositor);
                 expect(balance.toString()).eq(ethers.parseEther('1'))
             }
         })
